@@ -1,18 +1,30 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
-	"net/http"
+	"tlgodraw/internal/app/config"
+	"tlgodraw/pkg/logging"
+	"tlgodraw/pkg/utils"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"Status":"ok"}`)
-	})
+	envPath := flag.String("env", utils.DefaultEnv("APP_ENV_FILE", ".env"),
+		"path to dotenv file (use empty string to skip)")
+	configPath := flag.String("config", utils.DefaultEnv("APP_CONFIG", "configs/application.yaml"), "path to application yaml")
+	flag.Parse()
 
-	log.Println("Listening on :8091")
-	log.Fatal(http.ListenAndServe(":8091", mux))
+	envLoaded := utils.LoadDotEnv(*envPath)
+	appCfg, err := config.LoadApplication(*configPath)
+	if err != nil {
+		log.Fatalf("load application config: %v", err)
+	}
+	logger, err := logging.New(appCfg.App.Env)
+	if err != nil {
+		log.Fatalf("init logger: %v", err)
+	}
+	defer func() {
+		_ = logger.Sync()
+	}()
+
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func loadDotEnv(path string) string {
+func LoadDotEnv(path string) string {
 	if path == "" {
 		return ""
 	}
@@ -33,7 +33,7 @@ func loadDotEnv(path string) string {
 	return path
 }
 
-func defaultEnv(key, fallback string) string {
+func DefaultEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
