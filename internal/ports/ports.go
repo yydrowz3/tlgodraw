@@ -65,7 +65,7 @@ type MCPToolFactory interface {
 }
 
 type SkillFactory interface {
-	BuildTools(ctx context.Context, config model.ToolMCPConfig) ([]Tool, error)
+	BuildTools(ctx context.Context, config model.ToolSkillsConfig) ([]Tool, error)
 }
 
 type ToolRouter interface {

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"tlgodraw/internal/chat"
 	"tlgodraw/internal/dto"
 	"tlgodraw/internal/response"
-	"tlgodraw/internal/service/chat"
 	"tlgodraw/pkg/types"
 
 	"github.com/gin-gonic/gin"
