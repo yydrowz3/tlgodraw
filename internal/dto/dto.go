@@ -6,7 +6,7 @@ type AiAgentConfigResponse struct {
 	AgentDesc string `json:"agentDesc"`
 }
 
-type createSessionRequest struct {
+type CreateSessionRequest struct {
 	AgentID string `json:"agentID"`
 	UserID  string `json:"userID"`
 }
