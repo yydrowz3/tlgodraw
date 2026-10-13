@@ -49,3 +49,11 @@ func initialMessages(instruction, userText string) []ports.ChatMessage {
 
 	return messages
 }
+
+func firstText(content model.ChatContent) string {
+	if len(content.Texts) == 0 {
+		return ""
+	}
+
+	return content.Texts[0].Message
+}
