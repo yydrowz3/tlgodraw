@@ -79,7 +79,7 @@ func (p *EinoProvider) NewChatModel(_ context.Context, api ports.ModelAPI, confi
 	client := NewOpenAIClient(completionsURL, apiCfg.APIKey, config.Model, timeout)
 
 	return &EinoChatModel{
-		client: cient,
+		client: client,
 		tools:  tools,
 	}, nil
 }
@@ -92,7 +92,7 @@ func (m *EinoChatModel) Generate(ctx context.Context, messages []ports.ChatMessa
 	return m.client.Generate(ctx, messages, m.toolDefs())
 }
 
-func (m *EinoChatModel) Strem(ctx context.Context, messages []ports.ChatMessage) (<-chan ports.ChatStreamEvent, <-chan error) {
+func (m *EinoChatModel) Stream(ctx context.Context, messages []ports.ChatMessage) (<-chan ports.ChatStreamEvent, <-chan error) {
 	return m.client.Stream(ctx, messages, m.toolDefs())
 }
 
