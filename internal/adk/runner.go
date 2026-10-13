@@ -16,7 +16,7 @@ type Runner struct {
 	counter *atomic.Uint64
 }
 
-func (r *Runner) CreteSession(userID string) (string, error) {
+func (r *Runner) CreateSession(userID string) (string, error) {
 	if strings.TrimSpace(userID) == "" {
 		return "", fmt.Errorf("user id is required")
 	}
