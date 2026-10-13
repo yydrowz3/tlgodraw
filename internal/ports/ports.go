@@ -5,7 +5,7 @@ import (
 	"tlgodraw/internal/model"
 )
 
-type ModelAPI interface{}
+type ModelAPI any
 
 type ChatRole string
 
