@@ -71,6 +71,30 @@ func (f *Factory) NewRunner(_ context.Context, appName string, agent ports.Agent
 		appName: appName,
 		agent:   agent,
 		plugins: plugins,
-		couter:  &f.sessionCounter,
+		counter: &f.sessionCounter,
 	}, nil
+}
+
+func (f *Factory) resolvePlugins(names []string) ([]ports.RunnerPlugin, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+	plugins := make([]ports.RunnerPlugin, 0, len(names))
+	for _, name := range names {
+		pluginName := strings.TrimSpace(name)
+		if pluginName == "" {
+			continue
+		}
+		builder, ok := f.plugins[pluginName]
+		if !ok {
+			return nil, fmt.Errorf("runner plugin %q is not registered", pluginName)
+		}
+		plugin, err := builder()
+		if err != nil {
+			return nil, fmt.Errorf("craete runner plugin %q: %w", pluginName, err)
+		}
+		plugins = append(plugins, plugin)
+	}
+
+	return plugins, nil
 }

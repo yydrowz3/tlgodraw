@@ -5,6 +5,8 @@ import (
 	"strings"
 	"tlgodraw/internal/model"
 	"tlgodraw/internal/ports"
+
+	"google.golang.org/adk/v2/plugin/loggingplugin"
 )
 
 func newWorkflowAgent(kind string, config model.AgentWorkflowConfig, subAgents []ports.Agent, router ports.ToolRouter) (ports.Agent, error) {
@@ -56,4 +58,17 @@ func firstText(content model.ChatContent) string {
 	}
 
 	return content.Texts[0].Message
+}
+
+func defaultPlugins() map[string]func() (ports.RunnerPlugin, error) {
+	return map[string]func() (ports.RunnerPlugin, error){
+		"myTestPlugin": newMyTestPlugin,
+		"myLogPlugin": func() (ports.RunnerPlugin, error) {
+			p, err := loggingplugin.New("myLogPlugin")
+			if err != nil {
+				return nil, err
+			}
+			return adkRunnerPlugin{name: "myLogPlugin", plugin: p}, nil
+		},
+	}
 }
