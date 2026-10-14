@@ -124,3 +124,9 @@ func encodeTools(tools []OpenAIToolDef) []map[string]any {
 
 	return out
 }
+
+func mustJSON(v any) json.RawMessage {
+	raw, _ := json.Marshal(v)
+
+	return raw
+}
