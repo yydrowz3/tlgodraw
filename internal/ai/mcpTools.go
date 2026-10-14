@@ -3,6 +3,8 @@ package ai
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"tlgodraw/internal/model"
 	"tlgodraw/internal/ports"
 )
@@ -100,4 +102,68 @@ func validateMCPConfig(config model.ToolMCPConfig) (string, error) {
 		return "", fmt.Errorf("mcp config cannot define multiple transports in one entry")
 
 	}
+}
+
+func buildLocalMCPTools(config *model.LocalToolParameters) ([]ports.Tool, error) {
+	name := strings.TrimSpace(config.Name)
+	if name == "" {
+		return nil, fmt.Errorf("local mcp tool name is required")
+	}
+
+	switch name {
+	case "echoLocalTool":
+		return []ports.Tool{MCPTool{ToolName: name, TransportType: "local"}}, nil
+	default:
+		return nil, fmt.Errorf("local mcp tool %q is not registered in go", name)
+	}
+}
+
+func buildSSEMCPTools(config *model.SSEServerParameters) ([]ports.Tool, error) {
+	name := strings.TrimSpace(config.Name)
+	if name == "" {
+		return nil, fmt.Errorf("sse mcp tool name is required")
+	}
+	baseURI := strings.TrimSpace(config.BaseURI)
+	if baseURI == "" {
+		return nil, fmt.Errorf("sse mcp tool %q base-uri is required", name)
+	}
+
+	normalizedBaseURI, endpoint, err := normalizeSSETarget(baseURI, strings.TrimSpace(config.SSEEndpoint))
+	if err != nil {
+		return nil, fmt.Errorf("sse mcp tool %q: %w", name, err)
+	}
+	timeout := normalizeTimeout(config.RequestTimeout)
+
+	return []ports.Tool{MCPTool{
+		ToolName:       name,
+		TransportType:  "sse",
+		BaseURI:        normalizedBaseURI,
+		SSEEndpoint:    endpoint,
+		RequestTimeout: timeout,
+	}}, nil
+}
+
+func buildStdioMCPTools(config *model.StdioServerParameters) ([]ports.Tool, error) {
+	name := strings.TrimSpace(config.Name)
+	if name == "" {
+		return nil, fmt.Errorf("stdio mcp tool name is required")
+	}
+	command := strings.TrimSpace(config.ServerParameters.Command)
+	if command == "" {
+		return nil, fmt.Errorf("stdio mcp tool %q command is required", name)
+	}
+	timeout := normalizeTimeout(config.RequestTimeout)
+
+	return []ports.Tool{MCPTool{
+		ToolName:       name,
+		TransportType:  "stdio",
+		Command:        command,
+		Args:           append([]string(nil), config.ServerParameters.Args...),
+		Env:            cloneEnv(config.ServerParameters.Env),
+		RequestTimeout: timeout,
+	}}, nil
+}
+
+func mcpTimeoutString(timeout int) string {
+	return strconv.Itoa(normalizeTimeout(timeout))
 }
