@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"time"
 	"tlgodraw/internal/ports"
 )
@@ -61,4 +62,27 @@ func (r *MCPToolRouter) RegisterAndExpand(tool ports.Tool) []ports.Tool {
 	}
 
 	return expanded
+}
+
+func (r *MCPToolRouter) Tools() []ports.Tool {
+	return r.tools
+}
+
+func (r *MCPToolRouter) CallTool(ctx context.Context, name, arguments string) (string, error) {
+	if client, ok := r.clients[name]; ok {
+		return client.CallTool(ctx, name, arguments)
+	}
+	for _, tool := range r.tools {
+		if tool.Name() != name {
+			continue
+		}
+		switch tool.(type) {
+		case MCPTool:
+			return "", fmt.Errorf("mcp tool %q transport not supported in runtime", name)
+		default:
+			return "", fmt.Errorf("tool %q is not callable in current runtime", name)
+		}
+	}
+
+	return "", fmt.Errorf("tool %q is not registered", name)
 }
