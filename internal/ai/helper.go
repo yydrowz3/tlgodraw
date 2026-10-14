@@ -1,12 +1,8 @@
 package ai
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"tlgodraw/internal/ports"
 )
@@ -152,88 +148,4 @@ func extractToolText(raw json.RawMessage) string {
 	}
 
 	return strings.Join(parts, "\n")
-}
-
-func (c *MCPSSEClient) callRPC(ctx context.Context, method string, params any) (json.RawMessage, error) {
-	id := c.nextID.Add(1)
-	ch := make(chan json.RawMessage, 1)
-	c.mu.Lock()
-	postURL := c.postURL
-	c.pending[id] = ch
-	c.mu.Unlock()
-	if postURL == "" {
-		return nil, fmt.Errorf("mcp post url is not set")
-	}
-	body, err := json.Marshal(map[string]any{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"method":  method,
-		"params":  params,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("mcp marshal request: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, postURL, bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("mcp build post: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("mcp post: %w", err)
-	}
-	io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("mcp post status %d", resp.StatusCode)
-	}
-	waitCtx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	select {
-	case msg, ok := <-ch:
-		if !ok {
-			return nil, fmt.Errorf("mcp call %s closed unexpectedly", method)
-		}
-		var probe struct {
-			Err string `json:"__error__"`
-		}
-		if err := json.Unmarshal(msg, &probe); err == nil && probe.Err != "" {
-			return nil, fmt.Errorf("%s", probe.Err)
-		}
-		return msg, nil
-	case <-waitCtx.Done():
-		return nil, fmt.Errorf("mcp call %s timeout: %w", method, waitCtx.Err())
-	}
-}
-
-func (c *MCPSSEClient) notify(ctx context.Context, method string, params any) error {
-	c.mu.Lock()
-	postURL := c.postURL
-	c.mu.Unlock()
-	if postURL == "" {
-		return fmt.Errorf("mcp post url is not set")
-	}
-	body, err := json.Marshal(map[string]any{
-		"jsonrpc": "2.0",
-		"method":  method,
-		"params":  params,
-	})
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, postURL, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
-
-	return nil
 }
