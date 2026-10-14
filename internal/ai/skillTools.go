@@ -11,25 +11,10 @@ import (
 	"tlgodraw/internal/model"
 	"tlgodraw/internal/ports"
 
-	"github.com/goccy/go-yaml"
+	"go.yaml.in/yaml/v3"
 )
 
-type ToolFactory struct {
-	router *MCPToolRouter
-}
-
 type SkillFactory struct {
-}
-
-type MCPTool struct {
-	ToolName       string
-	TransportType  string
-	BaseURI        string
-	SSEEndpoint    string
-	Command        string
-	Args           []string
-	Env            map[string]string
-	RequestTimeout int
 }
 
 type SkillTool struct {
@@ -40,64 +25,12 @@ type SkillTool struct {
 	ManifestPath string
 }
 
-func NewToolFactory(router *MCPToolRouter) *ToolFactory {
-	return &ToolFactory{router: router}
-}
-
 func NewSkillFactory() *SkillFactory {
 	return &SkillFactory{}
 }
 
-func (t MCPTool) Name() string {
-	return t.ToolName
-}
-
 func (t SkillTool) Name() string {
 	return t.ToolName
-}
-
-func (f *ToolFactory) BuildTools(_ context.Context, config model.ToolMCPConfig) ([]ports.Tool, error) {
-	kind, err := validateMCPConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		tools []ports.Tool
-	)
-
-	switch {
-	case kind == "local":
-		tools, err = buildLocalMCPTools(config.Local)
-	case kind == "sse":
-		tools, err = buildSSEMCPTools(config.SSE)
-	case kind == "stdio":
-		tools, err = buildStdioMCPTools(config.Stdio)
-	case config.SSE != nil:
-		tools, err = buildSSEMCPTools(config.SSE)
-	case config.Stdio != nil:
-		tools, err = buildStdioMCPTools(config.Stdio)
-	default:
-		return nil, fmt.Errorf("mcp tool config is empty")
-	}
-	if err != nil {
-		return nil, err
-	}
-	if f.router != nil {
-		expanded := make([]ports.Tool, 0, len(tools))
-		for _, t := range tools {
-			ts := f.router.RegisterAndExpand(t)
-			if len(ts) == 0 {
-				continue
-			}
-			expanded = append(expanded, ts...)
-		}
-		if len(expanded) > 0 {
-			return expanded, nil
-		}
-	}
-
-	return tools, nil
 }
 
 func (f *SkillFactory) BuildTools(_ context.Context, config model.ToolSkillsConfig) ([]ports.Tool, error) {
@@ -183,17 +116,6 @@ func skillPathCandidates(cwd, skillType, rawPath string) []string {
 		}
 	}
 	return candidates
-}
-
-func existingPath(candidate, original string) (string, error) {
-	info, err := os.Stat(candidate)
-	if err != nil {
-		return "", fmt.Errorf("skill path %q cannot be resolved", original)
-	}
-	if !info.IsDir() && filepath.Base(candidate) != "SKILL.md" {
-		return "", fmt.Errorf("skill path %q is not a directory or SKILL.md file", candidate)
-	}
-	return candidate, nil
 }
 
 func findSkillManifests(root string) ([]string, error) {
