@@ -30,7 +30,7 @@ type EinoTool struct {
 }
 
 func (t EinoTool) Name() string {
-	return t.Name()
+	return t.ToolName
 }
 
 func NewEinoProvider() *EinoProvider {

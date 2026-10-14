@@ -15,6 +15,10 @@ import (
 func RegisterAgentRoutes(router gin.IRouter, service *chat.Service) {
 	group := router.Group("/api/v1")
 	group.GET("/query-ai-agent-config-list", queryAgentConfigList(service))
+	group.POST("/create_session", createSession(service))
+	group.GET("/create_session", createSessionQuery(service))
+	group.POST("/chat", chatMessage(service))
+	group.POST("/chat_stream", chatStream(service))
 }
 
 func queryAgentConfigList(service *chat.Service) gin.HandlerFunc {
