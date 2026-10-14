@@ -2,6 +2,10 @@ package bootstrap
 
 import (
 	"net/http"
+	"os"
+	"strings"
+	"tlgodraw/internal/config"
+	"tlgodraw/internal/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,4 +45,24 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func loadAgentTables(paths []string) (map[string]model.AiAgentConfigTable, error) {
+	merged := make(map[string]model.AiAgentConfigTable)
+	for _, raw := range paths {
+		path := strings.TrimSpace(raw)
+		if path == "" {
+			continue
+		}
+		expanded := os.ExpandEnv(path) // 环境变量 替换 文本 template
+		tables, err := config.LoadAgentTablesFile(expanded)
+		if err != nil {
+			return nil, err
+		}
+		for name, table := range tables {
+			merged[name] = table
+		}
+	}
+
+	return merged, nil
 }

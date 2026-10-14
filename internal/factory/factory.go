@@ -23,3 +23,7 @@ func NewDefaultFactory(modelProvider ports.ModelProvider, mcpFactory ports.MCPTo
 }
 
 // root -> api -> chat -> agent -> workflow(runner)
+
+func (f *DefaultFactory) ArmoryStrategyHandler() armory.Handler {
+	return f.root
+}
