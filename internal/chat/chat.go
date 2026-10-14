@@ -25,7 +25,7 @@ func (s *Service) QueryAgentConfigList() []model.AgentSummary {
 	agents := make([]model.AgentSummary, 0, len(registered))
 	for _, agent := range registered {
 		agents = append(agents, model.AgentSummary{
-			AgentID:   agent.AgentDesc,
+			AgentID:   agent.AgentID,
 			AgentName: agent.AgentName,
 			AgentDesc: agent.AgentDesc,
 		})

@@ -1,0 +1,19 @@
+app:
+  name: tlgodraw
+  env: development
+server:
+  addr: ":8091"
+database:
+  required: false
+  dsn: "host=127.0.0.1 port=13306 user=root password=123456 dbname=tlgodraw sslmode=disable TimeZone=Local"
+redis:
+  required: false
+  addr: "127.0.0.1:16379"
+  password: ""
+  db: 0
+llm:
+  request-timeout: 5m
+agent:
+  config-paths:
+    - configs/agent/draw.yaml
+
