@@ -1,9 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import Workbench from "@/ui/Workbench";
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/')({
-  component: RouteComponent,
-})
-
-function RouteComponent() {
-  return <div>Hello "/"!</div>
-}
+export const Route = createFileRoute("/")({
+  component: Workbench,
+});
