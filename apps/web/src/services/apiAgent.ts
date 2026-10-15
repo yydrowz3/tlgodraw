@@ -6,7 +6,9 @@ import type {
   Response,
 } from "@/types/api";
 
-const BASE_URL = (import.meta.env.VITE_BASE_URL as string).replace(/\/+$/, ""); // Remove trailing slash if present
+const BASE_URL = (
+  (import.meta.env.VITE_BASE_URL as string | undefined) ?? "http://localhost:8091/api/v1"
+).replace(/\/+$/, "");
 
 const handleResponse = async <T>(response: globalThis.Response): Promise<Response<T>> => {
   if (!response.ok) {

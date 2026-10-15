@@ -16,6 +16,7 @@ func newRouter(env string) *gin.Engine {
 	}
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(corsMiddleware())
 	if env != "prod" && env != "production" {
 		router.Use(gin.Logger())
 	}

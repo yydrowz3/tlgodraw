@@ -22,7 +22,8 @@ function Workbench() {
     {
       id: "1",
       role: "agent",
-      content: "你好！我是你的智能架构助手。请选择一个智能体开始对话。",
+      content:
+        "你好！我是你的绘图助手，可以帮你创建和完善架构图、流程图、时序图等图表。请告诉我你的绘图需求，例如：绘制一个用户登录流程图，或修改现有图表。",
       timestamp: Date.now(),
     },
   ]);
@@ -39,6 +40,7 @@ function Workbench() {
   const isExportingForChatRef = useRef(false);
   const isAutosaveRef = useRef(false);
   const pendingMessageRef = useRef("");
+  const exportTimeoutRef = useRef<number | null>(null);
   const [isDrawIoReady, setIsDrawIoReady] = useState(false);
   const initialLoadDoneRef = useRef(false);
 
@@ -143,7 +145,8 @@ function Workbench() {
         {
           id: Date.now().toString(),
           role: "agent",
-          content: "你好！我是你的智能架构助手。请选择一个智能体开始对话。",
+          content:
+            "你好！我是你的绘图助手，可以帮你创建和完善架构图、流程图、时序图等图表。请告诉我你的绘图需求，例如：绘制一个用户登录流程图，或修改现有图表。",
           timestamp: Date.now(),
         },
       ],
@@ -310,7 +313,8 @@ function Workbench() {
       const initialMsg: Message = {
         id: Date.now().toString(),
         role: "agent",
-        content: "你好！我是你的智能架构助手。请选择一个智能体开始对话。",
+        content:
+          "你好！我是你的绘图助手，可以帮你创建和完善架构图、流程图、时序图等图表。请告诉我你的绘图需求，例如：绘制一个用户登录流程图，或修改现有图表。",
         timestamp: Date.now(),
       };
 
@@ -447,12 +451,22 @@ function Workbench() {
     if (useHistoryContext && drawioRef.current && isDrawIoReady) {
       isExportingForChatRef.current = true;
       pendingMessageRef.current = content;
+      exportTimeoutRef.current = window.setTimeout(() => {
+        if (!isExportingForChatRef.current) return;
+        isExportingForChatRef.current = false;
+        performSendMessage(content, content);
+      }, 10000);
       try {
         drawioRef.current.exportDiagram({
           format: "xml" as any,
         });
       } catch (e) {
         console.error("Export failed", e);
+        if (exportTimeoutRef.current !== null) {
+          window.clearTimeout(exportTimeoutRef.current);
+          exportTimeoutRef.current = null;
+        }
+        isExportingForChatRef.current = false;
         performSendMessage(content, content);
       }
     } else {
@@ -464,6 +478,10 @@ function Workbench() {
     if (!lastExportedData) return;
 
     if (isExportingForChatRef.current) {
+      if (exportTimeoutRef.current !== null) {
+        window.clearTimeout(exportTimeoutRef.current);
+        exportTimeoutRef.current = null;
+      }
       isExportingForChatRef.current = false;
       const xml = lastExportedData.data;
       const content = pendingMessageRef.current;
@@ -532,7 +550,8 @@ function Workbench() {
             </svg>
           </div>
           <h1 className="text-lg font-bold text-slate-800 tracking-tight">
-            tl; go draw! <span className="text-slate-400 font-normal text-sm ml-2">@yydrowz3</span>
+            too long; go draw!{" "}
+            <span className="text-slate-400 font-normal text-sm ml-2">@yydrowz3</span>
           </h1>
         </div>
 
@@ -832,7 +851,7 @@ function Workbench() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={isSending ? "AI 正在思考中..." : "输入您的问题，描述您的需求..."}
+                placeholder={isSending ? "绘图助手正在响应中..." : "描述您的绘图需求..."}
                 disabled={isSending}
                 className="flex-1 px-3 py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-800 placeholder:text-slate-400 resize-none max-h-60 min-h-[50px] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb:hover]:bg-slate-400"
                 rows={1}
