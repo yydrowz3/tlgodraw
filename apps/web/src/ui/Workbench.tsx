@@ -5,7 +5,7 @@ import { clearUserInfo, getUserInfo } from "@/utils/cookie";
 import { isDrawIoXmlContent } from "@/utils/draw";
 import { Icons } from "@/utils/icons";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { DrawIoEmbed, type DrawIoEmbedRef } from "react-drawio";
 
 function Workbench() {
@@ -136,7 +136,7 @@ function Workbench() {
     }
   }, [messages, currentSessionId, sessionId]);
 
-  const createNewSession = (isInitial = false, backendId = "") => {
+  function createNewSession(isInitial: boolean = false, backendId: string = "") {
     const newSession: Session = {
       id: Date.now().toString(),
       backendSessionId: backendId,
@@ -162,14 +162,14 @@ function Workbench() {
     if (!isInitial && drawioRef.current) {
       drawioRef.current.load({ xml: "" }); // Clear diagram
     }
-  };
+  }
 
-  const handleSwitchSession = (targetSessionId: string) => {
+  function handleSwitchSession(targetSessionId: string) {
     if (targetSessionId === currentSessionId) return;
     loadSession(targetSessionId);
-  };
+  }
 
-  const loadSession = (targetSessionId: string) => {
+  function loadSession(targetSessionId: string) {
     const session = sessions.find((s) => s.id === targetSessionId);
     if (session) {
       setCurrentSessionId(targetSessionId);
@@ -181,9 +181,9 @@ function Workbench() {
         drawioRef.current.load({ xml: "" });
       }
     }
-  };
+  }
 
-  const handleDeleteSession = (e: React.MouseEvent, sessionIdToDelete: string) => {
+  function handleDeleteSession(e: React.MouseEvent, sessionIdToDelete: string) {
     e.stopPropagation();
     const newSessions = sessions.filter((s) => s.id !== sessionIdToDelete);
     setSessions(newSessions);
@@ -196,15 +196,15 @@ function Workbench() {
         createNewSession();
       }
     }
-  };
+  }
 
-  const handleDoubleClickSession = (session: Session) => {
+  function handleDoubleClickSession(session: Session) {
     setRenamingSessionId(session.id);
     setNewSessionTitle(session.title);
     setIsRenameModalOpen(true);
-  };
+  }
 
-  const handleRenameSave = () => {
+  function handleRenameSave() {
     if (renamingSessionId && newSessionTitle.trim()) {
       setSessions((prev) =>
         prev.map((s) => (s.id === renamingSessionId ? { ...s, title: newSessionTitle.trim() } : s)),
@@ -213,19 +213,19 @@ function Workbench() {
       setRenamingSessionId(null);
       setNewSessionTitle("");
     }
-  };
+  }
 
-  const exportDiagram = () => {
+  function exportDiagram() {
     if (drawioRef.current) {
       drawioRef.current.exportDiagram({
         format: "xmlsvg",
       });
     }
-  };
+  }
 
-  const scrollToBottom = () => {
+  function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }
 
   useEffect(() => {
     scrollToBottom();
@@ -270,21 +270,20 @@ function Workbench() {
     loadAgents();
   }, []);
 
-  const handleLogout = () => {
+  function handleLogout() {
     clearUserInfo();
     navigate({ to: "/login" });
-  };
+  }
 
-  const handleAgentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  function handleAgentChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newAgentId = e.target.value;
     setSelectedAgentId(newAgentId);
     setSessionId(""); // Reset session when agent changes
     localStorage.setItem("ai_agent_last_agent", newAgentId);
-  };
+  }
 
-  const finalizeNewChat = async () => {
+  async function finalizeNewChat() {
     if (!selectedAgentId || !currentUser) return;
-
     try {
       const res = await createSession(selectedAgentId, currentUser);
       createNewSession(false, res.data.sessionID);
@@ -292,13 +291,13 @@ function Workbench() {
     } catch (error) {
       console.error("Failed to create new session:", error);
     }
-  };
+  }
 
-  const handleNewChat = async () => {
+  async function handleNewChat() {
     finalizeNewChat();
-  };
+  }
 
-  const handleRestartSession = async () => {
+  async function handleRestartSession() {
     if (!selectedAgentId || !currentUser) return;
 
     if (!currentSessionId) {
@@ -338,9 +337,9 @@ function Workbench() {
     } catch (error) {
       console.error("Failed to restart session:", error);
     }
-  };
+  }
 
-  const performSendMessage = async (displayContent: string, apiContent: string) => {
+  async function performSendMessage(displayContent: string, apiContent: string) {
     if (!selectedAgentId) {
       setMessages((prev) => [
         ...prev,
@@ -439,9 +438,9 @@ function Workbench() {
     } finally {
       setIsSending(false);
     }
-  };
+  }
 
-  const handleSendMessage = async () => {
+  async function handleSendMessage() {
     if (!inputValue.trim() || isSending) return;
 
     const content = inputValue;
@@ -472,7 +471,7 @@ function Workbench() {
     } else {
       performSendMessage(content, content);
     }
-  };
+  }
 
   useEffect(() => {
     if (!lastExportedData) return;
@@ -509,12 +508,12 @@ function Workbench() {
     setImgData(lastExportedData.data);
   }, [lastExportedData]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }
 
   const quickActions = [
     {
