@@ -1,60 +1,18 @@
-import { clearUserInfo, getUserInfo, setUserInfo, type UserInfo } from "@/utils/cookie";
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useLogin } from "@/hooks/useLogin";
 
 function Login() {
-  const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState({ text: "", type: "" });
-  const [userInfo, setUserInfoState] = useState<UserInfo | null>(() => getUserInfo());
-  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isLoggedIn = Boolean(userInfo?.user);
-  const currentUser = userInfo?.user ?? "";
-
-  useEffect(() => {
-    if (userInfo && userInfo.user) {
-      navigate({ to: "/" });
-    }
-
-    return () => {
-      if (redirectTimer.current) clearTimeout(redirectTimer.current);
-    };
-  }, [navigate, userInfo]);
-
-  function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg({ text: "", type: "" });
-    if (!username || !password) {
-      setMsg({ text: "Please fill in your username and password.", type: "error" });
-      return;
-    }
-    if (username !== "admin" || password !== "admin") {
-      setMsg({
-        text: "Username or password is incorrect (Demo account: admin / admin).",
-        type: "error",
-      });
-      return;
-    }
-    setUserInfo(username);
-    setUserInfoState({ user: username, ts: Date.now() });
-    setMsg({ text: "Login successful, redirecting…", type: "info" });
-    redirectTimer.current = setTimeout(() => {
-      navigate({ to: "/" });
-    }, 500);
-  }
-
-  function handleFillDemo() {
-    setUsername("admin");
-    setPassword("admin");
-    setMsg({ text: "Demo account filled.", type: "info" });
-  }
-
-  function handleLogout() {
-    clearUserInfo();
-    setUserInfoState(null);
-    setMsg({ text: "Logged out, cookie cleared.", type: "info" });
-  }
+  const {
+    username,
+    password,
+    message,
+    isLoggedIn,
+    currentUser,
+    setUsername,
+    setPassword,
+    handleLogin,
+    handleFillDemo,
+    handleLogout,
+  } = useLogin();
 
   return (
     <main className="min-h-screen bg-base-200 px-4 py-6 text-base-content sm:px-8 lg:py-10">
@@ -196,9 +154,9 @@ function Login() {
             )}
 
             <div
-              className={`alert mt-5 min-h-12 py-3 text-sm ${msg.text ? "" : "invisible"} ${msg.type === "error" ? "alert-error" : "alert-info"}`}
+              className={`alert mt-5 min-h-12 py-3 text-sm ${message.text ? "" : "invisible"} ${message.type === "error" ? "alert-error" : "alert-info"}`}
             >
-              <span>{msg.text || "No status message"}</span>
+              <span>{message.text || "No status message"}</span>
             </div>
           </div>
 
