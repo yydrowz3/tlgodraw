@@ -1,18 +1,7 @@
 import { useLogin } from "@/hooks/useLogin";
 
 function Login() {
-  const {
-    username,
-    password,
-    message,
-    isLoggedIn,
-    currentUser,
-    setUsername,
-    setPassword,
-    handleLogin,
-    handleFillDemo,
-    handleLogout,
-  } = useLogin();
+  const { message, isLoggedIn, currentUser, form, handleFillDemo, handleLogout } = useLogin();
 
   return (
     <main className="min-h-screen bg-base-200 px-4 py-6 text-base-content sm:px-8 lg:py-10">
@@ -99,32 +88,49 @@ function Login() {
             </div>
 
             {!isLoggedIn ? (
-              <form onSubmit={handleLogin} autoComplete="on" className="space-y-5">
-                <label className="form-control w-full">
-                  <span className="label-text mb-2 text-sm font-semibold">Username</span>
-                  <input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username"
-                    autoComplete="username"
-                    className="input input-bordered input-lg w-full bg-base-100"
-                  />
-                </label>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void form.handleSubmit();
+                }}
+                autoComplete="on"
+                className="space-y-5"
+              >
+                <form.Field name="username">
+                  {(field) => (
+                    <label className="form-control w-full">
+                      <span className="label-text mb-2 text-sm font-semibold">Username</span>
+                      <input
+                        id={field.name}
+                        type="text"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Enter your username"
+                        autoComplete="username"
+                        className="input input-bordered input-lg w-full bg-base-100"
+                      />
+                    </label>
+                  )}
+                </form.Field>
 
-                <label className="form-control w-full">
-                  <span className="label-text mb-2 text-sm font-semibold">Password</span>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    className="input input-bordered input-lg w-full bg-base-100"
-                  />
-                </label>
+                <form.Field name="password">
+                  {(field) => (
+                    <label className="form-control w-full">
+                      <span className="label-text mb-2 text-sm font-semibold">Password</span>
+                      <input
+                        id={field.name}
+                        type="password"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        className="input input-bordered input-lg w-full bg-base-100"
+                      />
+                    </label>
+                  )}
+                </form.Field>
 
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                   <button type="submit" className="btn btn-primary btn-lg flex-1">

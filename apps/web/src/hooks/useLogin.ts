@@ -1,28 +1,21 @@
 import { EMPTY_MESSAGE, type LoginMessage } from "@/types/login";
 import { clearUserInfo, getUserInfo, setUserInfo, type UserInfo } from "@/utils/cookie";
+import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+
+type LoginFormValues = {
+  username: string;
+  password: string;
+};
 
 export function useLogin() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [message, setMessage] = useState<LoginMessage>(EMPTY_MESSAGE);
   const [userInfo, setUserInfoState] = useState<UserInfo | null>(() => getUserInfo());
   const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (userInfo?.user) navigate({ to: "/" });
-  }, [navigate, userInfo]);
-
-  useEffect(() => {
-    return () => {
-      if (redirectTimer.current) clearTimeout(redirectTimer.current);
-    };
-  }, []);
-
-  function handleLogin(event: FormEvent) {
-    event.preventDefault();
+  function handleLogin({ username, password }: LoginFormValues) {
     setMessage(EMPTY_MESSAGE);
 
     if (!username || !password) {
@@ -44,9 +37,27 @@ export function useLogin() {
     redirectTimer.current = setTimeout(() => navigate({ to: "/" }), 500);
   }
 
+  const form = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+    } satisfies LoginFormValues,
+    onSubmit: ({ value }) => handleLogin(value),
+  });
+
+  useEffect(() => {
+    if (userInfo?.user) navigate({ to: "/" });
+  }, [navigate, userInfo]);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    };
+  }, []);
+
   function handleFillDemo() {
-    setUsername("admin");
-    setPassword("admin");
+    form.setFieldValue("username", "admin");
+    form.setFieldValue("password", "admin");
     setMessage({ text: "Demo account filled.", type: "info" });
   }
 
@@ -57,14 +68,10 @@ export function useLogin() {
   }
 
   return {
-    username,
-    password,
     message,
     isLoggedIn: Boolean(userInfo?.user),
     currentUser: userInfo?.user ?? "",
-    setUsername,
-    setPassword,
-    handleLogin,
+    form,
     handleFillDemo,
     handleLogout,
   };

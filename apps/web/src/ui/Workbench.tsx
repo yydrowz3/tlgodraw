@@ -8,6 +8,7 @@ import { Icons } from "@/utils/icons";
 import { useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useRef, useState } from "react";
 import { DrawIoEmbed, type DrawIoEmbedRef } from "react-drawio";
+import { quickActions } from "@/utils/quickActions";
 
 function Workbench() {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ function Workbench() {
   const drawioRef = useRef<DrawIoEmbedRef>(null);
 
   // User State
-  const [currentUser, setCurrentUser] = useState("");
+  const [currentUser] = useState(() => getUserInfo()?.user ?? "");
 
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(true);
@@ -129,13 +130,6 @@ function Workbench() {
 
   // Check Login & Load Agents
   useEffect(() => {
-    const userInfo = getUserInfo();
-    if (!userInfo || !userInfo.user) {
-      navigate({ to: "/login" });
-      return;
-    }
-    setCurrentUser(userInfo.user);
-
     // Load Agents
     const loadAgents = async () => {
       try {
@@ -384,23 +378,12 @@ function Workbench() {
     }
   }
 
-  const quickActions = [
-    {
-      label: "绘制h5端登录流程图",
-      text: "请帮我绘制一个H5端的登录流程图，包含用户输入手机号、获取验证码、验证登录等步骤。",
-    },
-    {
-      label: "绘制电商购物流程图",
-      text: "请帮我绘制一个电商购物流程图，包含商品浏览、加入购物车、下单、支付、发货等环节。",
-    },
-  ];
-
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-slate-50 text-slate-900 font-sans">
       {/* Header - Minimal & Clean */}
       <div className="h-14 px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-40 relative">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-1.5 rounded-lg shadow-sm shadow-indigo-200">
+          <div className="bg-sky-600 p-1.5 rounded-lg shadow-sm shadow-sky-200">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -450,7 +433,7 @@ function Workbench() {
           {!isChatOpen && (
             <button
               onClick={() => setIsChatOpen(true)}
-              className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100"
+              className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors border border-sky-100"
               title="Open Assistant"
             >
               <Icons.Chat />
@@ -465,12 +448,12 @@ function Workbench() {
         <div className="w-64 bg-white text-slate-600 flex flex-col border-r border-slate-200 shrink-0 z-30">
           <div className="h-14 px-4 flex items-center justify-between border-b border-slate-100 shrink-0">
             <span className="font-semibold text-slate-800 flex items-center gap-2">
-              <Icons.MessageSquare className="w-4 h-4 text-indigo-600" />
+              <Icons.MessageSquare className="w-4 h-4 text-sky-600" />
               绘图记录
             </span>
             <button
               onClick={handleNewChat}
-              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all"
+              className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-md transition-all"
               title="New Chat"
             >
               <Icons.Plus className="w-5 h-5" />
@@ -491,19 +474,19 @@ function Workbench() {
                     group flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all border border-transparent
                     ${
                       currentSessionId === session.id
-                        ? "bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm"
+                        ? "bg-sky-50 text-sky-700 border-sky-100 shadow-sm"
                         : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
                     }
                   `}
                 >
                   <div className="flex-1 min-w-0">
                     <div
-                      className={`text-sm font-medium truncate ${currentSessionId === session.id ? "text-indigo-700" : "text-slate-700 group-hover:text-slate-900"}`}
+                      className={`text-sm font-medium truncate ${currentSessionId === session.id ? "text-sky-700" : "text-slate-700 group-hover:text-slate-900"}`}
                     >
                       {session.title}
                     </div>
                     <div
-                      className={`text-[10px] mt-0.5 ${currentSessionId === session.id ? "text-indigo-400" : "text-slate-400"}`}
+                      className={`text-[10px] mt-0.5 ${currentSessionId === session.id ? "text-sky-400" : "text-slate-400"}`}
                     >
                       {new Date(session.lastModified).toLocaleDateString()}{" "}
                       {new Date(session.lastModified).toLocaleTimeString([], {
@@ -518,7 +501,7 @@ function Workbench() {
                       p-1.5 rounded-md transition-all opacity-0 group-hover:opacity-100
                       ${
                         currentSessionId === session.id
-                          ? "hover:bg-indigo-100 text-indigo-400 hover:text-indigo-700"
+                          ? "hover:bg-sky-100 text-sky-400 hover:text-sky-700"
                           : "hover:bg-red-50 text-slate-400 hover:text-red-500"
                       }
                     `}
@@ -579,7 +562,7 @@ function Workbench() {
           {/* Chat Header */}
           <div className="h-14 px-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-200 shrink-0 ring-2 ring-white">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-linear-to-br from-sky-500 to-cyan-500 text-white shadow-md shadow-sky-200 shrink-0 ring-2 ring-white">
                 <Icons.Sparkles className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
@@ -625,8 +608,8 @@ function Workbench() {
                   shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm mt-1 ring-2 ring-white
                   ${
                     msg.role === "user"
-                      ? "bg-indigo-100 text-indigo-600"
-                      : "bg-white text-indigo-500 border border-slate-100"
+                      ? "bg-sky-100 text-sky-600"
+                      : "bg-white text-sky-500 border border-slate-100"
                   }
                 `}
                 >
@@ -648,7 +631,7 @@ function Workbench() {
                         p-3.5 text-sm leading-relaxed shadow-sm whitespace-pre-wrap
                         ${
                           msg.role === "user"
-                            ? "bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-indigo-200"
+                            ? "bg-sky-600 text-white rounded-2xl rounded-tr-sm shadow-sky-200"
                             : "bg-white border border-slate-200 text-slate-700 rounded-2xl rounded-tl-sm shadow-sm"
                         }
                     `}
@@ -670,7 +653,7 @@ function Workbench() {
                   <button
                     key={idx}
                     onClick={() => setInputValue(action.text)}
-                    className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100 font-medium shadow-sm"
+                    className="text-xs px-3 py-1.5 bg-sky-50 text-sky-600 rounded-full hover:bg-sky-100 transition-colors border border-sky-100 font-medium shadow-sm"
                   >
                     {action.label}
                   </button>
@@ -686,13 +669,13 @@ function Workbench() {
                         flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm
                         ${
                           useHistoryContext
-                            ? "bg-indigo-50 text-indigo-600 border-indigo-200 ring-1 ring-indigo-100"
+                            ? "bg-sky-50 text-sky-600 border-sky-200 ring-1 ring-sky-100"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700"
                         }
                     `}
               >
                 <Icons.Layers
-                  className={`w-3.5 h-3.5 ${useHistoryContext ? "text-indigo-500" : "text-slate-400"}`}
+                  className={`w-3.5 h-3.5 ${useHistoryContext ? "text-sky-500" : "text-slate-400"}`}
                 />
                 <span>携带画布上下文</span>
               </button>
@@ -707,7 +690,7 @@ function Workbench() {
                 </kbd>
               </span>
             </div>
-            <div className="relative flex items-end gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-50/50 focus-within:bg-white transition-all shadow-inner">
+            <div className="relative flex items-end gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 focus-within:border-sky-300 focus-within:ring-4 focus-within:ring-sky-50/50 focus-within:bg-white transition-all shadow-inner">
               <textarea
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -725,7 +708,7 @@ function Workbench() {
                       p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center
                       ${
                         inputValue.trim() && !isSending
-                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:scale-105 active:scale-95"
+                          ? "bg-sky-600 text-white shadow-md shadow-sky-200 hover:bg-sky-700 hover:scale-105 active:scale-95"
                           : "bg-slate-200 text-slate-400 cursor-not-allowed"
                       }
                     `}
@@ -738,7 +721,7 @@ function Workbench() {
                 </button>
                 <button
                   onClick={handleRestartSession}
-                  className="p-2.5 rounded-lg bg-white text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-all duration-200 border border-slate-200 hover:border-indigo-100 shadow-sm"
+                  className="p-2.5 rounded-lg bg-white text-slate-400 hover:bg-slate-50 hover:text-sky-600 transition-all duration-200 border border-slate-200 hover:border-sky-100 shadow-sm"
                   title="Restart Session"
                 >
                   <Icons.Plus className="w-4 h-4" />
@@ -800,7 +783,7 @@ function Workbench() {
               <a
                 href={imgData}
                 download="diagram.svg"
-                className="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all text-sm flex items-center gap-2"
+                className="px-5 py-2.5 bg-sky-600 text-white font-medium rounded-lg hover:bg-sky-700 shadow-lg shadow-sky-200 hover:shadow-sky-300 transition-all text-sm flex items-center gap-2"
               >
                 <Icons.Download className="w-4 h-4" />
                 Download File
@@ -831,7 +814,7 @@ function Workbench() {
                 value={newSessionTitle}
                 onChange={(e) => setNewSessionTitle(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleRenameSave()}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all"
                 placeholder="Enter new name"
                 autoFocus
               />
@@ -846,7 +829,7 @@ function Workbench() {
               </button>
               <button
                 onClick={handleRenameSave}
-                className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all text-sm"
+                className="px-4 py-2 bg-sky-600 text-white font-medium rounded-lg hover:bg-sky-700 shadow-lg shadow-sky-200 hover:shadow-sky-300 transition-all text-sm"
               >
                 Save Changes
               </button>
