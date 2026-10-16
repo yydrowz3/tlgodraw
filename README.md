@@ -61,6 +61,23 @@ base URL from `VITE_BASE_URL`, for example:
 VITE_BASE_URL=http://localhost:8091
 ```
 
+## Deploy the API to Render
+
+The repository includes `render.yaml` for deploying the Go API as a Render Web
+Service. It uses `apps/api` as the root directory, builds with:
+
+```bash
+go build -tags netgo -ldflags '-s -w' -o app ./cmd/server
+```
+
+and starts with `./app`. Render provides the `PORT` environment variable; the
+API uses it automatically in production. The health check endpoint is
+`/healthz`.
+
+Set `OPENAI_BASE_URL` and `OPENAI_API_KEY` as secret environment variables in
+Render. The agent configuration is loaded from
+`apps/api/configs/agent/draw.yaml` relative to the API working directory.
+
 ## Running Locally
 
 ### Start the API

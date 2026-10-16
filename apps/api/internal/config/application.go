@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v3"
@@ -76,8 +78,9 @@ func LoadApplication(path string) (Application, error) {
 	if err := yaml.Unmarshal(data, &app); err != nil {
 		return Application{}, fmt.Errorf("parse application config: %w", err)
 	}
-	if app.Server.Addr == "" {
-		app.Server.Addr = ":8091"
+	app.Server.Addr, err = resolveServerAddr(app.Server.Addr, os.Getenv("PORT"))
+	if err != nil {
+		return Application{}, err
 	}
 	if app.App.Env == "" {
 		app.App.Env = "local"
@@ -87,4 +90,20 @@ func LoadApplication(path string) (Application, error) {
 	}
 
 	return app, nil
+}
+
+func resolveServerAddr(configuredAddr, port string) (string, error) {
+	port = strings.TrimSpace(port)
+	if port != "" {
+		portNumber, err := strconv.Atoi(port)
+		if err != nil || portNumber < 1 || portNumber > 65535 {
+			return "", fmt.Errorf("invalid PORT %q: must be a number from 1 to 65535", port)
+		}
+		return ":" + strconv.Itoa(portNumber), nil
+	}
+
+	if strings.TrimSpace(configuredAddr) == "" {
+		return ":8091", nil
+	}
+	return configuredAddr, nil
 }

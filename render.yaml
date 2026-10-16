@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: tlgodraw-api
+    runtime: go
+    rootDir: apps/api
+    buildCommand: go build -tags netgo -ldflags '-s -w' -o app ./cmd/server
+    startCommand: ./app
+    healthCheckPath: /healthz
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_CONFIG
+        value: configs/application.yaml
+      - key: APP_ENV_FILE
+        value: ""
+      - key: OPENAI_BASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
