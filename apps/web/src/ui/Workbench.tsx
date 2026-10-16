@@ -1,4 +1,5 @@
 import { chat, createSession, queryAiAgentConfigList } from "@/services/apiAgent";
+import { useSessions } from "@/hooks/useSessions";
 import type { AiAgentConfigResponseDTO } from "@/types/api";
 import type { Message, Session } from "@/types/draw";
 import { clearUserInfo, getUserInfo } from "@/utils/cookie";
@@ -18,15 +19,19 @@ function Workbench() {
 
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "agent",
-      content:
-        "你好！我是你的绘图助手，可以帮你创建和完善架构图、流程图、时序图等图表。请告诉我你的绘图需求，例如：绘制一个用户登录流程图，或修改现有图表。",
-      timestamp: Date.now(),
-    },
-  ]);
+  const {
+    sessions,
+    currentSessionId,
+    messages,
+    sessionId,
+    setMessages,
+    setSessionId,
+    createNewSession,
+    loadSession,
+    deleteSession,
+    renameSession,
+    updateCurrentSession,
+  } = useSessions();
   const [inputValue, setInputValue] = useState("");
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,7 +52,6 @@ function Workbench() {
   // Agent State
   const [agents, setAgents] = useState<AiAgentConfigResponseDTO[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState("");
-  const [sessionId, setSessionId] = useState("");
 
   // Rename State
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -55,8 +59,6 @@ function Workbench() {
   const [newSessionTitle, setNewSessionTitle] = useState("");
 
   // Session Management State
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const currentSessionRef = useRef(currentSessionId);
 
   // Update ref
@@ -75,126 +77,22 @@ function Workbench() {
     }
   }, [isDrawIoReady, currentSessionId, sessions]);
 
-  // Load sessions from localStorage
-  useEffect(() => {
-    const savedSessions = localStorage.getItem("drawio_sessions");
-    if (savedSessions) {
-      try {
-        const parsed = JSON.parse(savedSessions);
-        setSessions(parsed);
-        if (parsed.length > 0) {
-          // Load the most recent session (first one if sorted by lastModified desc)
-          const mostRecent = parsed.sort(
-            (a: Session, b: Session) => b.lastModified - a.lastModified,
-          )[0];
-          setCurrentSessionId(mostRecent.id);
-          setMessages(mostRecent.messages);
-          // Note: Draw.io XML loading happens after drawioRef is ready or when we switch
-        } else {
-          createNewSession(true);
-        }
-      } catch (e) {
-        console.error("Failed to parse sessions:", e);
-        createNewSession(true);
-      }
-    } else {
-      createNewSession(true);
-    }
-  }, []);
-
-  // Save sessions to localStorage whenever they change
-  useEffect(() => {
-    if (sessions.length > 0) {
-      try {
-        localStorage.setItem("drawio_sessions", JSON.stringify(sessions));
-      } catch (e) {
-        console.error("Failed to save sessions to localStorage:", e);
-      }
-    }
-  }, [sessions]);
-
-  // Update current session messages and backendSessionId when they change
-  useEffect(() => {
-    if (currentSessionId) {
-      setSessions((prev) =>
-        prev.map((session) => {
-          if (session.id === currentSessionId) {
-            return {
-              ...session,
-              messages,
-              backendSessionId: sessionId,
-              // Update title if it's the default "New Chat" and we have a user message
-              title:
-                session.title === "New Chat" && messages.find((m) => m.role === "user")
-                  ? messages.find((m) => m.role === "user")?.content.slice(0, 20) || "New Chat"
-                  : session.title,
-            };
-          }
-          return session;
-        }),
-      );
-    }
-  }, [messages, currentSessionId, sessionId]);
-
-  function createNewSession(isInitial: boolean = false, backendId: string = "") {
-    const newSession: Session = {
-      id: Date.now().toString(),
-      backendSessionId: backendId,
-      title: "New Chat",
-      messages: [
-        {
-          id: Date.now().toString(),
-          role: "agent",
-          content:
-            "你好！我是你的绘图助手，可以帮你创建和完善架构图、流程图、时序图等图表。请告诉我你的绘图需求，例如：绘制一个用户登录流程图，或修改现有图表。",
-          timestamp: Date.now(),
-        },
-      ],
-      drawIoXml: null,
-      lastModified: Date.now(),
-    };
-
-    setSessions((prev) => [newSession, ...prev]);
-    setCurrentSessionId(newSession.id);
-    setMessages(newSession.messages);
-    setSessionId(backendId);
-
-    if (!isInitial && drawioRef.current) {
-      drawioRef.current.load({ xml: "" }); // Clear diagram
-    }
-  }
-
   function handleSwitchSession(targetSessionId: string) {
     if (targetSessionId === currentSessionId) return;
-    loadSession(targetSessionId);
-  }
-
-  function loadSession(targetSessionId: string) {
-    const session = sessions.find((s) => s.id === targetSessionId);
-    if (session) {
-      setCurrentSessionId(targetSessionId);
-      setMessages(session.messages);
-      setSessionId(session.backendSessionId || "");
-      if (drawioRef.current && session.drawIoXml) {
-        drawioRef.current.load({ xml: session.drawIoXml });
-      } else if (drawioRef.current) {
-        drawioRef.current.load({ xml: "" });
-      }
+    const session = loadSession(targetSessionId);
+    if (drawioRef.current && session) {
+      drawioRef.current.load({ xml: session.drawIoXml || "" });
     }
   }
 
   function handleDeleteSession(e: React.MouseEvent, sessionIdToDelete: string) {
     e.stopPropagation();
-    const newSessions = sessions.filter((s) => s.id !== sessionIdToDelete);
-    setSessions(newSessions);
-    localStorage.setItem("drawio_sessions", JSON.stringify(newSessions));
-
-    if (currentSessionId === sessionIdToDelete) {
-      if (newSessions.length > 0) {
-        loadSession(newSessions[0].id);
-      } else {
-        createNewSession();
-      }
+    deleteSession(sessionIdToDelete);
+    const nextSession = sessions.find((session) => session.id !== sessionIdToDelete);
+    if (currentSessionId === sessionIdToDelete && nextSession && drawioRef.current) {
+      drawioRef.current.load({ xml: nextSession.drawIoXml || "" });
+    } else if (currentSessionId === sessionIdToDelete && drawioRef.current) {
+      drawioRef.current.load({ xml: "" });
     }
   }
 
@@ -206,9 +104,7 @@ function Workbench() {
 
   function handleRenameSave() {
     if (renamingSessionId && newSessionTitle.trim()) {
-      setSessions((prev) =>
-        prev.map((s) => (s.id === renamingSessionId ? { ...s, title: newSessionTitle.trim() } : s)),
-      );
+      renameSession(renamingSessionId, newSessionTitle);
       setIsRenameModalOpen(false);
       setRenamingSessionId(null);
       setNewSessionTitle("");
@@ -268,7 +164,7 @@ function Workbench() {
       }
     };
     loadAgents();
-  }, []);
+  }, [navigate, setMessages]);
 
   function handleLogout() {
     clearUserInfo();
@@ -286,7 +182,8 @@ function Workbench() {
     if (!selectedAgentId || !currentUser) return;
     try {
       const res = await createSession(selectedAgentId, currentUser);
-      createNewSession(false, res.data.sessionID);
+      const newSession = createNewSession(res.data.sessionID);
+      drawioRef.current?.load({ xml: newSession.drawIoXml || "" });
       setInputValue("");
     } catch (error) {
       console.error("Failed to create new session:", error);
@@ -321,19 +218,12 @@ function Workbench() {
       setMessages([initialMsg]);
       setInputValue("");
 
-      setSessions((prev) =>
-        prev.map((session) => {
-          if (session.id === currentSessionId) {
-            return {
-              ...session,
-              backendSessionId: newBackendId,
-              messages: [initialMsg],
-              lastModified: Date.now(),
-            };
-          }
-          return session;
-        }),
-      );
+      updateCurrentSession((session) => ({
+        ...session,
+        backendSessionId: newBackendId,
+        messages: [initialMsg],
+        lastModified: Date.now(),
+      }));
     } catch (error) {
       console.error("Failed to restart session:", error);
     }
@@ -372,14 +262,7 @@ function Workbench() {
       }
 
       // Update session lastModified
-      setSessions((prev) =>
-        prev.map((session) => {
-          if (session.id === currentSessionId) {
-            return { ...session, lastModified: Date.now() };
-          }
-          return session;
-        }),
-      );
+      updateCurrentSession((session) => ({ ...session, lastModified: Date.now() }));
 
       // 2. Send Message
       const chatRes = await chat({
@@ -402,18 +285,11 @@ function Workbench() {
         setMessages((prev) => [...prev, agentMsg]);
       } else {
         // Save to session immediately (always update the session that initiated the request)
-        setSessions((prev) =>
-          prev.map((session) => {
-            if (session.id === currentSessionId) {
-              return {
-                ...session,
-                drawIoXml: content,
-                lastModified: Date.now(),
-              };
-            }
-            return session;
-          }),
-        );
+        updateCurrentSession((session) => ({
+          ...session,
+          drawIoXml: content,
+          lastModified: Date.now(),
+        }));
 
         // Render only if still on the same session
         if (drawioRef.current && currentSessionId === currentSessionRef.current) {
@@ -493,14 +369,7 @@ function Workbench() {
     if (isAutosaveRef.current) {
       isAutosaveRef.current = false;
       const xml = lastExportedData.data;
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === currentSessionId) {
-            return { ...s, drawIoXml: xml };
-          }
-          return s;
-        }),
-      );
+      updateCurrentSession((session) => ({ ...session, drawIoXml: xml }));
       return;
     }
 
@@ -677,14 +546,7 @@ function Workbench() {
                   // Prefer using the XML directly from the autosave event if available
                   if (data && typeof data === "object" && "xml" in data) {
                     const xmlContent = (data as any).xml;
-                    setSessions((prev) =>
-                      prev.map((s) => {
-                        if (s.id === currentSessionId) {
-                          return { ...s, drawIoXml: xmlContent };
-                        }
-                        return s;
-                      }),
-                    );
+                    updateCurrentSession((session) => ({ ...session, drawIoXml: xmlContent }));
                   } else {
                     // Fallback to export if no XML provided in event
                     isAutosaveRef.current = true;
