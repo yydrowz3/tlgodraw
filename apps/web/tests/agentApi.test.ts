@@ -8,6 +8,9 @@ import {
   useCreateSessionMutation,
 } from "@/hooks/useAgentApi";
 import { createQueryTestContext } from "./queryTestUtils";
+import { createSession } from "@/services/apiAgent";
+import { AppError, formatError } from "@/i18n/messages";
+import { setLanguage } from "@/i18n";
 
 const agents = [{ agentID: "agent", agentName: "Agent", agentDesc: "" }];
 const fetchMock = vi.fn<typeof fetch>();
@@ -44,7 +47,11 @@ describe("agent queries", () => {
     const { result } = renderHook(useAiAgentsQuery, createQueryTestContext());
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result.current.error?.message).toContain("status: 503, message: Unavailable");
+    expect(result.current.error).toMatchObject({
+      key: "errors.http",
+      status: 503,
+      detail: "Unavailable",
+    });
   });
 
   it("aborts the underlying GET when the last observer unmounts", async () => {
@@ -92,6 +99,33 @@ describe("agent queries", () => {
 });
 
 describe("agent mutations", () => {
+  it.each([
+    ["0001", "errors.apiUnknown"],
+    ["0002", "errors.apiParameter"],
+    ["0003", "errors.apiAgent"],
+    ["9999", "errors.apiUnknown"],
+  ])("maps API code %s while retaining the original server detail", async (code, key) => {
+    fetchMock.mockResolvedValue(Response.json({ code, info: "Original server detail" }));
+    const error = await createSession("agent", "user").catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({ code, key, detail: "Original server detail" });
+    const english = formatError(error);
+    await setLanguage("ja");
+    expect(formatError(error)).not.toBe(english);
+    expect(formatError(error)).toContain("Original server detail");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("wraps network failures while preserving query cancellation", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await expect(createSession("agent", "user")).rejects.toMatchObject({
+      key: "errors.network",
+      detail: "Failed to fetch",
+    });
+    const cancellation = new DOMException("Aborted", "AbortError");
+    fetchMock.mockRejectedValueOnce(cancellation);
+    await expect(createSession("agent", "user")).rejects.toBe(cancellation);
+  });
   it("unwraps successful results and preserves POST payloads", async () => {
     fetchMock
       .mockResolvedValueOnce(reply({ sessionID: "backend" }))

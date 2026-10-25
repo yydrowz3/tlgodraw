@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   ChatCircleTextIcon,
   DotsThreeIcon,
@@ -21,32 +22,33 @@ type Props = {
   onLogout: () => void;
 };
 export function SessionSidebar(props: Props) {
+  const { t, i18n } = useTranslation();
   return (
     <>
       <div className="panel-heading">
         <h2 className="flex items-center gap-2 font-semibold">
           <ChatCircleTextIcon size={19} className="text-primary" aria-hidden="true" />
-          绘图记录
+          {t("sessions.history")}
         </h2>
         <div className="flex">
           <button
             className="icon-button"
             disabled={props.disabled}
             onClick={props.onNew}
-            aria-label="New Chat"
+            aria-label={t("sessions.newChat")}
           >
             <PlusIcon size={20} aria-hidden="true" />
           </button>
           <button
             className="icon-button xl:hidden"
             onClick={props.onClose}
-            aria-label="Close history"
+            aria-label={t("sessions.closeHistory")}
           >
             <XIcon size={20} aria-hidden="true" />
           </button>
         </div>
       </div>
-      <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="绘图记录">
+      <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label={t("sessions.history")}>
         <ul className="space-y-1">
           {[...props.sessions]
             .sort((a, b) => b.lastModified - a.lastModified)
@@ -66,11 +68,11 @@ export function SessionSidebar(props: Props) {
                   <span
                     className={`block truncate text-sm font-medium ${session.id === props.currentId ? "text-primary" : ""}`}
                   >
-                    {session.title}
+                    {session.isDefaultTitle ? t("sessions.newChat") : session.title}
                   </span>
                   <span className="mt-1 block text-xs text-base-content/50">
-                    {new Date(session.lastModified).toLocaleDateString()}{" "}
-                    {new Date(session.lastModified).toLocaleTimeString([], {
+                    {new Date(session.lastModified).toLocaleDateString(i18n.resolvedLanguage)}{" "}
+                    {new Date(session.lastModified).toLocaleTimeString(i18n.resolvedLanguage, {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
@@ -82,7 +84,9 @@ export function SessionSidebar(props: Props) {
                 >
                   <summary
                     className="icon-button list-none"
-                    aria-label={`Session actions: ${session.title}`}
+                    aria-label={t("sessions.actions", {
+                      title: session.isDefaultTitle ? t("sessions.newChat") : session.title,
+                    })}
                   >
                     <DotsThreeIcon size={23} aria-hidden="true" />
                   </summary>
@@ -99,7 +103,7 @@ export function SessionSidebar(props: Props) {
                         }}
                       >
                         <PencilSimpleIcon size={16} aria-hidden="true" />
-                        Rename Session
+                        {t("sessions.rename")}
                       </button>
                     </li>
                     <li>
@@ -114,7 +118,7 @@ export function SessionSidebar(props: Props) {
                         }}
                       >
                         <TrashIcon size={16} aria-hidden="true" />
-                        Delete
+                        {t("sessions.delete")}
                       </button>
                     </li>
                   </ul>
@@ -124,13 +128,13 @@ export function SessionSidebar(props: Props) {
         </ul>
       </nav>
       <div className="border-t border-base-300 p-3">
-        <p className="mb-2 px-2 text-xs text-base-content/50">Saved in this browser</p>
+        <p className="mb-2 px-2 text-xs text-base-content/50">{t("sessions.savedLocally")}</p>
         <button
           className="btn btn-ghost min-h-11 w-full justify-start sm:hidden"
           onClick={props.onLogout}
         >
           <SignOutIcon size={18} aria-hidden="true" />
-          Logout
+          {t("common.logout")}
         </button>
       </div>
     </>

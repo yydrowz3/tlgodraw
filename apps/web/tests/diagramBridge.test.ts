@@ -4,6 +4,7 @@ import { useDiagramBridge } from "@/hooks/useDiagramBridge";
 import type { Session } from "@/types/draw";
 import type { Theme } from "@/utils/theme";
 import type { DrawIoEmbedRef } from "react-drawio";
+import { setLanguage } from "@/i18n";
 
 const initialSession: Session = {
   id: "a",
@@ -29,6 +30,21 @@ function mount() {
 }
 afterEach(() => vi.useRealTimers());
 describe("diagram theme synchronization", () => {
+  it("translates a pending editor error without loading or remounting the diagram", async () => {
+    vi.useFakeTimers();
+    const hook = mount();
+    hook.rerender({ theme: "dark" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(hook.result.current.themeError).toContain("timed out");
+    await act(() => setLanguage("zh-CN"));
+    expect(hook.result.current.themeError).toContain("图表导出超时");
+    expect(hook.result.current.generation).toBe(0);
+    expect(hook.exportDiagram).toHaveBeenCalledOnce();
+    expect(hook.load).not.toHaveBeenCalled();
+    expect(hook.result.current.mountXml).toBe("<old/>");
+  });
   it("saves the newest XML before remounting and uses the final theme choice", async () => {
     const hook = mount();
     hook.rerender({ theme: "dark" });
@@ -84,7 +100,9 @@ describe("diagram theme synchronization", () => {
       });
     });
     expect(hook.result.current.generation).toBe(0);
-    expect(hook.result.current.themeError).toBe("Storage full");
+    expect(hook.result.current.themeError).toBe(
+      "Something went wrong. Please try again. Storage full",
+    );
   });
   it("keeps newer AI results received during a theme snapshot", async () => {
     const hook = mount();

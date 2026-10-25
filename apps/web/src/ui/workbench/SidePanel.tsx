@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, type ReactNode } from "react";
 
 export function SidePanel({
@@ -19,6 +20,7 @@ export function SidePanel({
   children: ReactNode;
   inactive?: boolean;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLElement>(null);
   const close = useRef(onClose);
   useEffect(() => {
@@ -68,7 +70,7 @@ export function SidePanel({
         <button
           tabIndex={-1}
           className="fixed inset-0 z-40 bg-neutral/50 backdrop-blur-xs"
-          aria-label={`Close ${label}`}
+          aria-label={t("common.closePanel", { label })}
           onClick={onClose}
         />
       )}

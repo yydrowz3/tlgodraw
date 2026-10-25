@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import type { Session } from "@/types/draw";
 import { Modal } from "@/ui/Modal";
@@ -10,9 +11,12 @@ export function RenameSessionDialog({
   onClose: () => void;
   onSave: (id: string, title: string) => void;
 }) {
-  const [title, setTitle] = useState(session.title);
+  const { t } = useTranslation();
+  const [title, setTitle] = useState(
+    session.isDefaultTitle ? t("sessions.newChat") : session.title,
+  );
   return (
-    <Modal title="Rename Session" onClose={onClose}>
+    <Modal title={t("sessions.rename")} onClose={onClose}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -24,7 +28,7 @@ export function RenameSessionDialog({
       >
         <fieldset className="fieldset">
           <label htmlFor="session-title" className="fieldset-label text-base-content">
-            Session Name
+            {t("sessions.name")}
           </label>
           <input
             id="session-title"
@@ -32,15 +36,15 @@ export function RenameSessionDialog({
             className="input min-h-11 w-full"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Enter new name"
+            placeholder={t("sessions.namePlaceholder")}
           />
         </fieldset>
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" className="btn btn-ghost min-h-11" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button type="submit" className="btn btn-primary min-h-11" disabled={!title.trim()}>
-            Save Changes
+            {t("sessions.save")}
           </button>
         </div>
       </form>

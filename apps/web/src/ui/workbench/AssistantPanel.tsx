@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { SparkleIcon, XIcon } from "@phosphor-icons/react";
 import type { AiAgentConfigResponseDTO } from "@/types/api";
 import type { AgentStatus } from "@/hooks/useWorkbench";
@@ -17,6 +18,7 @@ type Props = {
   composer: ComponentProps<typeof MessageComposer>;
 };
 export function AssistantPanel(props: Props) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="panel-heading">
@@ -26,7 +28,7 @@ export function AssistantPanel(props: Props) {
           </div>
           <div className="min-w-0 flex-1">
             <label className="sr-only" htmlFor="agent-select">
-              AI Assistant
+              {t("assistant.title")}
             </label>
             <select
               id="agent-select"
@@ -38,10 +40,10 @@ export function AssistantPanel(props: Props) {
               {props.status !== "ready" && (
                 <option value="">
                   {props.status === "loading"
-                    ? "Loading agents..."
+                    ? t("assistant.loading")
                     : props.status === "empty"
-                      ? "No agents available"
-                      : "Unable to load agents"}
+                      ? t("assistant.empty")
+                      : t("assistant.loadFailed")}
                 </option>
               )}
               {props.agents.map((agent) => (
@@ -52,7 +54,7 @@ export function AssistantPanel(props: Props) {
             </select>
           </div>
         </div>
-        <button className="icon-button" aria-label="Close Assistant" onClick={props.onClose}>
+        <button className="icon-button" aria-label={t("assistant.close")} onClick={props.onClose}>
           <XIcon size={20} aria-hidden="true" />
         </button>
       </div>
@@ -61,15 +63,15 @@ export function AssistantPanel(props: Props) {
           {props.status === "loading" ? (
             <span className="flex items-center gap-2 text-base-content/60">
               <span className="loading loading-spinner loading-xs" />
-              Loading agents...
+              {t("assistant.loading")}
             </span>
           ) : (
             <div className="flex items-center justify-between gap-2">
               <span className="text-base-content/60">
-                {props.status === "empty" ? "No agents available" : "加载智能体列表失败"}
+                {props.status === "empty" ? t("assistant.empty") : t("assistant.loadFailed")}
               </span>
               <button className="btn btn-ghost btn-sm min-h-11" onClick={props.onRetry}>
-                Retry
+                {t("common.retry")}
               </button>
             </div>
           )}

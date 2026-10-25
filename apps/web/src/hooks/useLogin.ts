@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { EMPTY_MESSAGE, type LoginMessage } from "@/types/login";
 import { clearUserInfo, getUserInfo, setUserInfo, type UserInfo } from "@/utils/cookie";
 import { useForm } from "@tanstack/react-form";
@@ -10,6 +11,7 @@ type LoginFormValues = {
 };
 
 export function useLogin() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [message, setMessage] = useState<LoginMessage>(EMPTY_MESSAGE);
   const [userInfo, setUserInfoState] = useState<UserInfo | null>(() => getUserInfo());
@@ -19,13 +21,13 @@ export function useLogin() {
     setMessage(EMPTY_MESSAGE);
 
     if (!username || !password) {
-      setMessage({ text: "Please fill in your username and password.", type: "error" });
+      setMessage({ key: "login.required", type: "error" });
       return;
     }
 
     if (username !== "admin" || password !== "admin") {
       setMessage({
-        text: "Username or password is incorrect (Demo account: admin / admin).",
+        key: "login.invalid",
         type: "error",
       });
       return;
@@ -33,7 +35,7 @@ export function useLogin() {
 
     setUserInfo(username);
     setUserInfoState({ user: username, ts: Date.now() });
-    setMessage({ text: "Login successful, redirecting…", type: "info" });
+    setMessage({ key: "login.success", type: "info" });
     redirectTimer.current = setTimeout(() => navigate({ to: "/" }), 500);
   }
 
@@ -58,17 +60,17 @@ export function useLogin() {
   function handleFillDemo() {
     form.setFieldValue("username", "admin");
     form.setFieldValue("password", "admin");
-    setMessage({ text: "Demo account filled.", type: "info" });
+    setMessage({ key: "login.demoFilled", type: "info" });
   }
 
   function handleLogout() {
     clearUserInfo();
     setUserInfoState(null);
-    setMessage({ text: "Logged out, cookie cleared.", type: "info" });
+    setMessage({ key: "login.loggedOut", type: "info" });
   }
 
   return {
-    message,
+    message: { text: message.key ? t(message.key) : "", type: message.type },
     isLoggedIn: Boolean(userInfo?.user),
     currentUser: userInfo?.user ?? "",
     form,

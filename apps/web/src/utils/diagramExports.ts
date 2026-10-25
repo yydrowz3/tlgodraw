@@ -1,3 +1,4 @@
+import { AppError } from "@/i18n/messages";
 import type { DrawIoEmbedRef } from "react-drawio";
 export type ExportPurpose = "download" | "context" | "autosave" | "theme";
 export type DiagramExport = { data: string; xml: string; sessionId: string };
@@ -40,19 +41,19 @@ export class DiagramExportQueue {
     if (!job) return;
     this.active = job;
     this.timer = setTimeout(
-      () => this.finish(new Error("Diagram export timed out. Please try again.")),
+      () => this.finish(new AppError("errors.exportTimeout")),
       10_000,
     );
     try {
       this.send({ format: "xmlsvg", requestId: job.id });
     } catch (error) {
-      this.finish(error instanceof Error ? error : new Error("Diagram export failed."));
+      this.finish(error instanceof Error ? error : new AppError("errors.exportFailed"));
     }
   }
   receive(event: ExportEvent) {
     if (!this.active || event.message?.requestId !== this.active.id) return;
     if (event.error || !event.xml || !event.data) {
-      this.finish(new Error(event.error || "The editor did not return a complete diagram."));
+      this.finish(new AppError(event.error ? "errors.exportFailed" : "errors.incompleteDiagram", { detail: event.error }));
     } else {
       this.finish(undefined, {
         xml: event.xml,
@@ -76,7 +77,7 @@ export class DiagramExportQueue {
     const jobs = [...(this.active ? [this.active] : []), ...this.jobs];
     this.active = null;
     this.jobs = [];
-    jobs.forEach((job) => job.reject(new Error("The editor was closed.")));
+    jobs.forEach((job) => job.reject(new AppError("errors.editorClosed")));
     this.onBusy(false);
   }
 }

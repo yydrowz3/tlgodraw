@@ -1,5 +1,8 @@
 import type { Message, Session } from "@/types/draw";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { i18n } from "@/i18n";
+import { AppError, formatError } from "@/i18n/messages";
 
 const STORAGE_KEY = "drawio_sessions";
 export const DEFAULT_TITLE = "New Chat";
@@ -11,11 +14,16 @@ export const makeMessage = (role: Message["role"], content: string): Message => 
   content,
   timestamp: Date.now(),
 });
+export const makeGreeting = (): Message => ({
+  ...makeMessage("agent", i18n.t("assistant.greeting")),
+  kind: "greeting",
+});
 const makeSession = (backendSessionId = ""): Session => ({
   id: crypto.randomUUID(),
   backendSessionId,
   title: DEFAULT_TITLE,
-  messages: [makeMessage("agent", GREETING)],
+  isDefaultTitle: true,
+  messages: [makeGreeting()],
   drawIoXml: null,
   lastModified: Date.now(),
 });
@@ -25,15 +33,29 @@ function readInitialState(): SessionsState {
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (Array.isArray(saved)) {
-      const sessions = saved.filter(
-        (s): s is Session =>
-          s &&
-          typeof s.id === "string" &&
-          typeof s.title === "string" &&
-          Array.isArray(s.messages) &&
-          typeof s.lastModified === "number" &&
-          (s.drawIoXml === null || typeof s.drawIoXml === "string"),
-      );
+      const sessions = saved
+        .filter(
+          (s): s is Session =>
+            s &&
+            typeof s.id === "string" &&
+            typeof s.title === "string" &&
+            Array.isArray(s.messages) &&
+            typeof s.lastModified === "number" &&
+            (s.drawIoXml === null || typeof s.drawIoXml === "string"),
+        )
+        .map((session) => ({
+          ...session,
+          isDefaultTitle:
+            typeof session.isDefaultTitle === "boolean"
+              ? session.isDefaultTitle
+              : session.title === DEFAULT_TITLE &&
+                !session.messages.some((message) => message?.role === "user"),
+          messages: session.messages.map((message, index) =>
+            index === 0 && message?.role === "agent" && message.content === GREETING
+              ? { ...message, kind: "greeting" as const }
+              : message,
+          ),
+        }));
       if (sessions.length)
         return {
           sessions,
@@ -47,18 +69,18 @@ function readInitialState(): SessionsState {
   return { sessions: [session], currentSessionId: session.id };
 }
 export function useSessions() {
+  useTranslation();
   const [state, setState] = useState(readInitialState);
   const latest = useRef(state);
-  const [storageError, setStorageError] = useState("");
+  const [storageError, setStorageError] = useState<AppError | null>(null);
   const persistSessions = useCallback(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(latest.current.sessions));
-      setStorageError("");
+      setStorageError(null);
     } catch {
-      setStorageError(
-        "Unable to save sessions in this browser. Keep this page open and try again.",
-      );
-      throw new Error("Unable to save sessions in this browser.");
+      const error = new AppError("errors.storage");
+      setStorageError(error);
+      throw error;
     }
   }, []);
   useEffect(() => {
@@ -130,7 +152,8 @@ export function useSessions() {
   );
   const renameSession = useCallback(
     (id: string, title: string) => {
-      if (title.trim()) updateSession(id, (s) => ({ ...s, title: title.trim() }));
+      if (title.trim())
+        updateSession(id, (s) => ({ ...s, title: title.trim(), isDefaultTitle: false }));
     },
     [updateSession],
   );
@@ -147,7 +170,7 @@ export function useSessions() {
     getSession,
     updateSession,
     persistSessions,
-    storageError,
+    storageError: storageError ? formatError(storageError) : "",
     createNewSession,
     loadSession,
     deleteSession,

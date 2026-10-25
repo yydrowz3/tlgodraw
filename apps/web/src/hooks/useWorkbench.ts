@@ -1,19 +1,21 @@
+import { useTranslation } from "react-i18next";
+import { i18n } from "@/i18n";
+import { AppError, formatError } from "@/i18n/messages";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { AiAgentConfigResponseDTO } from "@/types/api";
 import { useAiAgentsQuery, useChatMutation, useCreateSessionMutation } from "./useAgentApi";
 import { clearUserInfo, getUserInfo } from "@/utils/cookie";
 import { isDrawIoXmlContent } from "@/utils/draw";
-import { DEFAULT_TITLE, GREETING, makeMessage, useSessions } from "./useSessions";
+import { makeGreeting, makeMessage, useSessions } from "./useSessions";
 import { useTheme } from "./useTheme";
 import { useDiagramBridge } from "./useDiagramBridge";
 
 export type AgentStatus = "loading" | "ready" | "empty" | "error";
 const EMPTY_AGENTS: AiAgentConfigResponseDTO[] = [];
-const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : "Something went wrong. Please try again.";
 
 export function useWorkbench() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const sessions = useSessions();
   const { resolvedTheme } = useTheme();
@@ -50,7 +52,7 @@ export function useWorkbench() {
   const [operationBusy, setOperationBusy] = useState(false);
   const sending = useRef(false);
   const operating = useRef(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<Error | null>(null);
   const [imgData, setImgData] = useState<string | null>(null);
   const alive = useRef(true);
   const { updateSession } = sessions;
@@ -82,18 +84,18 @@ export function useWorkbench() {
   }, [selectedAgentId, sessions.currentSessionId, updateSession]);
 
   async function saveBeforeNavigation() {
-    if (!bridge.ready) throw new Error("The diagram editor is not ready.");
+    if (!bridge.ready) throw new AppError("errors.editorNotReady");
     await bridge.capture("autosave");
   }
   async function runOperation(operation: () => Promise<void>) {
     if (operating.current || bridge.syncing || bridge.busy) return;
     operating.current = true;
     setOperationBusy(true);
-    setNotice("");
+    setNotice(null);
     try {
       await operation();
     } catch (error) {
-      if (alive.current) setNotice(errorMessage(error));
+      if (alive.current) setNotice(error instanceof Error ? error : new AppError("errors.unknown"));
     } finally {
       operating.current = false;
       if (alive.current) setOperationBusy(false);
@@ -109,7 +111,7 @@ export function useWorkbench() {
   }
   async function newChat() {
     await runOperation(async () => {
-      if (!selectedAgentId) throw new Error("请先选择一个智能体。");
+      if (!selectedAgentId) throw new AppError("assistant.selectRequired");
       await saveBeforeNavigation();
       if (!alive.current) return;
       const result = await createSession({ agentID: selectedAgentId, userID: currentUser });
@@ -138,7 +140,7 @@ export function useWorkbench() {
       sessions.updateSession(id, (session) => ({
         ...session,
         backendSessionId: previousAgentId.current === selectedAgentId ? result.sessionID : "",
-        messages: [makeMessage("agent", GREETING)],
+        messages: [makeGreeting()],
         lastModified: Date.now(),
       }));
       setInputValue("");
@@ -156,7 +158,7 @@ export function useWorkbench() {
     if (!inputValue.trim() || sending.current || operating.current || bridge.syncing || bridge.busy)
       return;
     if (!selectedAgentId) {
-      setNotice("请先选择一个智能体。");
+      setNotice(new AppError("assistant.selectRequired"));
       return;
     }
     const id = sessions.currentSessionId;
@@ -166,10 +168,11 @@ export function useWorkbench() {
     sending.current = true;
     setSendingSessionId(id);
     setInputValue("");
-    setNotice("");
+    setNotice(null);
     sessions.updateSession(id, (session) => ({
       ...session,
-      title: session.title === DEFAULT_TITLE ? content.slice(0, 20) : session.title,
+      title: session.isDefaultTitle ? content.slice(0, 20) : session.title,
+      isDefaultTitle: false,
       messages: [...session.messages, makeMessage("user", content)],
       lastModified: Date.now(),
     }));
@@ -184,8 +187,7 @@ export function useWorkbench() {
             "\n\x60\x60\x60\n\n" +
             content;
         } catch {
-          if (alive.current)
-            setNotice("Canvas context was unavailable. Your message was sent without it.");
+          if (alive.current) setNotice(new AppError("errors.contextUnavailable"));
         }
       }
       if (!alive.current) return;
@@ -222,7 +224,10 @@ export function useWorkbench() {
       if (!alive.current) return;
       sessions.updateSession(id, (session) => ({
         ...session,
-        messages: [...session.messages, makeMessage("agent", "Error: " + errorMessage(error))],
+        messages: [
+          ...session.messages,
+          makeMessage("agent", i18n.t("common.error", { message: formatError(error) })),
+        ],
       }));
     } finally {
       sending.current = false;
@@ -252,7 +257,7 @@ export function useWorkbench() {
     selectedAgentId,
     selectAgent,
     retryAgents: () => {
-      setNotice("");
+      setNotice(null);
       setDismissedAgentError(agentsQuery.error);
       void agentsQuery.refetch();
     },
@@ -264,12 +269,12 @@ export function useWorkbench() {
     sendingSessionId,
     operationBusy,
     notice:
-      notice ||
+      (notice ? formatError(notice) : "") ||
       (agentsQuery.isError && agentsQuery.error !== dismissedAgentError
-        ? "加载智能体列表失败，请检查后端服务是否启动。"
+        ? `${t("assistant.loadFailedNotice")} ${formatError(agentsQuery.error)}`
         : ""),
     dismissNotice: () => {
-      setNotice("");
+      setNotice(null);
       setDismissedAgentError(agentsQuery.error);
     },
     imgData,

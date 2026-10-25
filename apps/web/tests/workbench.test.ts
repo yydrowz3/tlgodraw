@@ -4,6 +4,8 @@ import { chat, createSession, queryAiAgentConfigList } from "@/services/apiAgent
 import { useWorkbench } from "@/hooks/useWorkbench";
 import { aiAgentsQueryKey } from "@/hooks/useAgentApi";
 import { createQueryTestContext } from "./queryTestUtils";
+import { i18n, setLanguage } from "@/i18n";
+import { AppError } from "@/i18n/messages";
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@/services/apiAgent", () => ({
   chat: vi.fn(),
@@ -37,6 +39,84 @@ beforeEach(() => {
   });
 });
 describe("workbench request ownership", () => {
+  it("preserves in-flight requests and drafts across language and session changes", async () => {
+    let finish!: (value: Awaited<ReturnType<typeof chat>>) => void;
+    vi.mocked(chat).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { result } = renderHook(useWorkbench, createQueryTestContext());
+    await waitFor(() => expect(result.current.agentStatus).toBe("ready"));
+    const original = result.current.currentSessionId;
+    act(() => result.current.setInputValue("Original request"));
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.sendMessage();
+    });
+    await waitFor(() => expect(chat).toHaveBeenCalledOnce());
+    expect(result.current.getSession(original)).toMatchObject({
+      title: "Original request",
+      isDefaultTitle: false,
+    });
+    act(() => {
+      result.current.createNewSession();
+      result.current.setInputValue("Unsent draft");
+    });
+    const current = result.current.currentSessionId;
+    await act(() => setLanguage("ja"));
+    expect(result.current.inputValue).toBe("Unsent draft");
+    expect(result.current.sendingSessionId).toBe(original);
+    await act(async () => {
+      finish({ code: "0000", info: "", data: { content: "Untranslated AI reply" } });
+      await pending;
+    });
+    expect(result.current.currentSessionId).toBe(current);
+    expect(result.current.getSession(original)?.messages.at(-1)?.content).toBe(
+      "Untranslated AI reply",
+    );
+    expect(queryAiAgentConfigList).toHaveBeenCalledOnce();
+    expect(createSession).toHaveBeenCalledOnce();
+    expect(chat).toHaveBeenCalledOnce();
+  });
+
+  it("records failures in the language at completion and keeps them unchanged afterward", async () => {
+    vi.mocked(chat).mockRejectedValue(
+      new AppError("errors.apiAgent", { code: "0003", detail: "Missing agent" }),
+    );
+    const { result } = renderHook(useWorkbench, createQueryTestContext());
+    await waitFor(() => expect(result.current.agentStatus).toBe("ready"));
+    await act(() => setLanguage("ja"));
+    act(() => result.current.setInputValue("test"));
+    await act(() => result.current.sendMessage());
+    const recorded = result.current.messages.at(-1)?.content;
+    expect(recorded).toContain("エラー");
+    expect(recorded).toContain("Missing agent");
+    await act(() => setLanguage("en"));
+    expect(result.current.messages.at(-1)?.content).toBe(recorded);
+  });
+
+  it("preserves an explicitly renamed default-looking title and marks restarted greetings", async () => {
+    vi.mocked(chat).mockResolvedValue({ code: "0000", info: "", data: { content: "Reply" } });
+    const { result } = renderHook(useWorkbench, createQueryTestContext());
+    await waitFor(() => expect(result.current.agentStatus).toBe("ready"));
+    act(() => {
+      result.current.renameSession(result.current.currentSessionId, "New Chat");
+      result.current.setInputValue("Do not rename my session");
+    });
+    await act(() => result.current.sendMessage());
+    expect(result.current.currentSession).toMatchObject({
+      title: "New Chat",
+      isDefaultTitle: false,
+    });
+    await act(() => result.current.restartSession());
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0]).toMatchObject({
+      kind: "greeting",
+      content: i18n.t("assistant.greeting"),
+    });
+  });
   it("keeps a delayed reply and backend ID in the originating session", async () => {
     let finish!: (value: Awaited<ReturnType<typeof chat>>) => void;
     vi.mocked(chat).mockImplementationOnce(
@@ -105,7 +185,7 @@ describe("workbench request ownership", () => {
     await waitFor(() => expect(result.current.agentStatus).toBe("empty"));
     act(() => result.current.retryAgents());
     await waitFor(() => expect(result.current.agentStatus).toBe("error"));
-    expect(result.current.notice).toContain("加载智能体列表失败");
+    expect(result.current.notice).toContain("Unable to load agents");
     act(() => result.current.retryAgents());
     await waitFor(() => expect(result.current.agentStatus).toBe("ready"));
   });
@@ -169,7 +249,7 @@ describe("workbench request ownership", () => {
     await act(async () => {
       await context.client.invalidateQueries({ queryKey: aiAgentsQueryKey });
     });
-    await waitFor(() => expect(result.current.notice).toContain("加载智能体列表失败"));
+    await waitFor(() => expect(result.current.notice).toContain("Unable to load agents"));
     expect(result.current.agentStatus).toBe("ready");
     expect(result.current.agents).toHaveLength(1);
     expect(result.current.selectedAgentId).toBe("agent");
@@ -249,7 +329,9 @@ describe("workbench request ownership", () => {
     });
     expect(createSession).toHaveBeenCalledTimes(1);
     expect(chat).toHaveBeenCalledTimes(1);
-    expect(result.current.messages.at(-1)?.content).toBe("Error: Chat failed");
+    expect(result.current.messages.at(-1)?.content).toBe(
+      "Error: Something went wrong. Please try again. Chat failed",
+    );
     expect(result.current.isSending).toBe(false);
   });
 

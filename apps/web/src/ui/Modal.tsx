@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, type ReactNode } from "react";
 import { XIcon } from "@phosphor-icons/react";
 
@@ -12,6 +13,7 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!;
@@ -38,7 +40,12 @@ export function Modal({
       >
         <div className="flex shrink-0 items-center justify-between gap-3">
           <h2 className="text-lg font-bold">{title}</h2>
-          <button type="button" className="icon-button" aria-label="Close dialog" onClick={onClose}>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={t("common.closeDialog")}
+            onClick={onClose}
+          >
             <XIcon size={20} aria-hidden="true" />
           </button>
         </div>
@@ -46,13 +53,13 @@ export function Modal({
       </div>
       <form method="dialog" className="modal-backdrop">
         <button
-          aria-label="Close dialog backdrop"
+          aria-label={t("common.closeBackdrop")}
           onClick={(event) => {
             event.preventDefault();
             onClose();
           }}
         >
-          close
+          {t("common.closeDialog")}
         </button>
       </form>
     </dialog>

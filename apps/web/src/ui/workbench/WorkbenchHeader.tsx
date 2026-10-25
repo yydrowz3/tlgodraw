@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   ChatCircleIcon,
   DownloadSimpleIcon,
@@ -5,6 +6,7 @@ import {
   PolygonIcon,
   SignOutIcon,
 } from "@phosphor-icons/react";
+import { LanguageSelector } from "@/ui/LanguageSelector";
 import { ThemeSelector } from "@/ui/ThemeSelector";
 
 type Props = {
@@ -18,12 +20,13 @@ type Props = {
   onLogout: () => void;
 };
 export function WorkbenchHeader(props: Props) {
+  const { t } = useTranslation();
   return (
-    <header className="navbar min-h-18 shrink-0 gap-1 border-b border-base-300 bg-base-100 px-2 sm:gap-3 sm:px-5">
+    <header className="navbar grid min-h-18 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-1 border-b border-base-300 bg-base-100 px-2 pt-2 sm:flex sm:gap-3 sm:px-5 sm:pt-0">
       <button
         className="icon-button xl:hidden"
         type="button"
-        aria-label="绘图记录"
+        aria-label={t("sessions.history")}
         aria-expanded={props.historyOpen}
         aria-controls="session-panel"
         onClick={props.onHistory}
@@ -43,23 +46,26 @@ export function WorkbenchHeader(props: Props) {
       </div>
       <span className="badge badge-outline hidden gap-2 border-base-300 px-3 py-3 text-xs lg:inline-flex">
         <span className="size-1.5 rounded-full bg-primary" />
-        {props.currentUser || "Guest"}
+        {props.currentUser || t("common.guest")}
       </span>
-      <ThemeSelector />
+      <div className="col-span-4 row-start-2 flex justify-end gap-2 pb-2 sm:contents">
+        <LanguageSelector />
+        <ThemeSelector />
+      </div>
       <button
-        className="btn btn-ghost min-h-11 gap-2 px-2 sm:px-3"
+        className="btn btn-ghost col-start-3 row-start-1 min-h-11 gap-2 px-2 sm:px-3"
         type="button"
         disabled={!props.canExport}
         onClick={props.onExport}
-        aria-label="Export"
+        aria-label={t("export.action")}
       >
         <DownloadSimpleIcon size={20} aria-hidden="true" />
-        <span className="hidden sm:inline">Export</span>
+        <span className="hidden sm:inline">{t("export.action")}</span>
       </button>
       <button
-        className={`icon-button ${props.assistantOpen ? "text-primary" : ""}`}
+        className={`icon-button col-start-4 row-start-1 ${props.assistantOpen ? "text-primary" : ""}`}
         type="button"
-        aria-label="Open Assistant"
+        aria-label={t("assistant.open")}
         aria-expanded={props.assistantOpen}
         aria-controls="assistant-panel"
         onClick={props.onAssistant}
@@ -69,7 +75,7 @@ export function WorkbenchHeader(props: Props) {
       <button
         className="icon-button hidden hover:text-error sm:inline-flex"
         type="button"
-        aria-label="Logout"
+        aria-label={t("common.logout")}
         onClick={props.onLogout}
       >
         <SignOutIcon size={20} aria-hidden="true" />

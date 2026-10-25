@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { DrawIoEmbed } from "react-drawio";
 import type { useDiagramBridge } from "@/hooks/useDiagramBridge";
 type Props = ReturnType<typeof useDiagramBridge>;
@@ -15,10 +16,11 @@ export function DiagramCanvas({
   loadError,
   retryLoad,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <main
       className="diagram-canvas relative flex min-h-0 min-w-0 flex-1 flex-col bg-base-200 p-1.5 sm:p-3"
-      aria-label="Diagram canvas"
+      aria-label={t("canvas.label")}
     >
       <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
         <DrawIoEmbed
@@ -47,17 +49,13 @@ export function DiagramCanvas({
           >
             <span className="loading loading-spinner loading-md text-primary" />
             <p className="text-sm text-base-content/70">
-              {syncing
-                ? "Saving diagram and updating appearance…"
-                : busy
-                  ? "Saving diagram…"
-                  : "Loading diagram editor…"}
+              {syncing ? t("canvas.savingTheme") : busy ? t("canvas.saving") : t("canvas.loading")}
             </p>
             {loadError && (
               <>
                 <p className="max-w-sm text-error">{loadError}</p>
                 <button className="btn btn-outline min-h-11" onClick={retryLoad}>
-                  Retry
+                  {t("common.retry")}
                 </button>
               </>
             )}

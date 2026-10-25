@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { WarningCircleIcon, XIcon } from "@phosphor-icons/react";
 import type { Session } from "@/types/draw";
@@ -13,6 +14,7 @@ import { ExportDialog } from "./workbench/ExportDialog";
 import { RenameSessionDialog } from "./workbench/RenameSessionDialog";
 
 export default function Workbench() {
+  const { t } = useTranslation();
   useVisualViewport();
   const model = useWorkbench();
   const wide = useMediaQuery("(min-width: 1280px)");
@@ -52,7 +54,7 @@ export default function Workbench() {
       <div className="relative flex min-h-0 min-w-0 flex-1">
         <SidePanel
           id="session-panel"
-          label="绘图记录"
+          label={t("sessions.history")}
           side="left"
           visible={historyVisible}
           overlay={!wide}
@@ -88,7 +90,7 @@ export default function Workbench() {
                 <button
                   className="icon-button"
                   onClick={model.dismissNotice}
-                  aria-label="Dismiss notification"
+                  aria-label={t("workbench.dismiss")}
                 >
                   <XIcon size={18} aria-hidden="true" />
                 </button>
@@ -102,14 +104,14 @@ export default function Workbench() {
             >
               <WarningCircleIcon size={18} className="text-warning" aria-hidden="true" />
               <span className="min-w-0 flex-1">
-                Editor appearance was not updated. {model.bridge.themeError}
+                {t("canvas.themeFailed", { message: model.bridge.themeError })}
               </span>
               <button
                 className="btn btn-outline btn-sm min-h-11"
                 onClick={model.bridge.retryTheme}
                 disabled={model.bridge.syncing}
               >
-                Retry
+                {t("common.retry")}
               </button>
             </div>
           )}
@@ -117,7 +119,7 @@ export default function Workbench() {
         </div>
         <SidePanel
           id="assistant-panel"
-          label="AI Assistant"
+          label={t("assistant.title")}
           inactive={!wide && historyOpen}
           side="right"
           visible={assistantVisible}

@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { AppError, formatError } from "@/i18n/messages";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DrawIoEmbedRef } from "react-drawio";
 import type { Session } from "@/types/draw";
@@ -12,6 +14,7 @@ type Options = {
 };
 
 export function useDiagramBridge(options: Options) {
+  useTranslation();
   const latest = useRef(options);
   useLayoutEffect(() => {
     latest.current = options;
@@ -34,8 +37,8 @@ export function useDiagramBridge(options: Options) {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [themeError, setThemeError] = useState("");
-  const [loadError, setLoadError] = useState("");
+  const [themeError, setThemeError] = useState<Error | null>(null);
+  const [loadError, setLoadError] = useState<Error | null>(null);
   const [mountXml, setMountXml] = useState(options.initialSession.drawIoXml || "");
   const queue = useRef<DiagramExportQueue | null>(null);
 
@@ -50,7 +53,7 @@ export function useDiagramBridge(options: Options) {
   const onLoad = useCallback(() => {
     readyRef.current = true;
     setReady(true);
-    setLoadError("");
+    setLoadError(null);
     if (mountedRevision.current !== active.current.revision) loadLatest();
   }, [loadLatest]);
 
@@ -77,7 +80,7 @@ export function useDiagramBridge(options: Options) {
 
   const capture = useCallback(async (purpose: ExportPurpose) => {
     const { id, revision } = active.current;
-    if (!queue.current) throw new Error("The diagram editor is not ready.");
+    if (!queue.current) throw new AppError("errors.editorNotReady");
     const result = await queue.current.request(purpose, id);
     // A newer AI response takes precedence over a snapshot started before it arrived.
     if (active.current.id === id && active.current.revision !== revision) {
@@ -93,7 +96,7 @@ export function useDiagramBridge(options: Options) {
     if (!readyRef.current || changingTheme.current || target === themeRef.current) return;
     changingTheme.current = true;
     setSyncing(true);
-    setThemeError("");
+    setThemeError(null);
     try {
       await capture("theme");
       latest.current.persist();
@@ -112,9 +115,7 @@ export function useDiagramBridge(options: Options) {
     } catch (error) {
       if (!alive.current) return;
       failedTheme.current = latest.current.theme;
-      setThemeError(
-        error instanceof Error ? error.message : "Unable to synchronize the editor theme.",
-      );
+      setThemeError(error instanceof Error ? error : new AppError("errors.themeSync"));
     } finally {
       changingTheme.current = false;
       if (alive.current) setSyncing(false);
@@ -134,13 +135,7 @@ export function useDiagramBridge(options: Options) {
 
   useEffect(() => {
     if (ready) return;
-    const timer = window.setTimeout(
-      () =>
-        setLoadError(
-          "The diagram editor is taking longer than expected. Check your connection and retry.",
-        ),
-      20_000,
-    );
+    const timer = window.setTimeout(() => setLoadError(new AppError("errors.editorSlow")), 20_000);
     return () => window.clearTimeout(timer);
   }, [ready, generation]);
 
@@ -148,8 +143,7 @@ export function useDiagramBridge(options: Options) {
     alive.current = true;
     queue.current = new DiagramExportQueue(
       (action) => {
-        if (!drawioRef.current || !readyRef.current)
-          throw new Error("The diagram editor is not ready.");
+        if (!drawioRef.current || !readyRef.current) throw new AppError("errors.editorNotReady");
         drawioRef.current.exportDiagram(action);
       },
       (value) => {
@@ -175,7 +169,7 @@ export function useDiagramBridge(options: Options) {
         active.current.xml = event.xml;
         latest.current.saveXml(active.current.id, event.xml);
       } else {
-        void capture("autosave").catch((error: Error) => setLoadError(error.message));
+        void capture("autosave").catch((error: Error) => setLoadError(error));
       }
     },
     [capture],
@@ -188,7 +182,7 @@ export function useDiagramBridge(options: Options) {
   const retryLoad = useCallback(() => {
     readyRef.current = false;
     setReady(false);
-    setLoadError("");
+    setLoadError(null);
     mountedRevision.current = active.current.revision;
     setMountXml(active.current.xml);
     setGeneration((value) => value + 1);
@@ -202,8 +196,8 @@ export function useDiagramBridge(options: Options) {
     ready,
     busy,
     syncing,
-    themeError: options.theme === editorTheme ? "" : themeError,
-    loadError,
+    themeError: options.theme === editorTheme || !themeError ? "" : formatError(themeError),
+    loadError: loadError ? formatError(loadError) : "",
     onLoad,
     onAutoSave,
     onExport,
