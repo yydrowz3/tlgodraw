@@ -22,9 +22,12 @@ const handleResponse = async <T>(response: globalThis.Response): Promise<Respons
   return data;
 };
 
-export async function queryAiAgentConfigList(): Promise<Response<AiAgentConfigResponseDTO[]>> {
+export async function queryAiAgentConfigList(
+  signal?: AbortSignal,
+): Promise<Response<AiAgentConfigResponseDTO[]>> {
   const response = await fetch(`${BASE_URL}/query-ai-agent-config-list`, {
     method: "GET",
+    signal,
     headers: {
       "Content-Type": "application/json",
     },

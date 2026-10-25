@@ -1,185 +1,156 @@
 import type { Message, Session } from "@/types/draw";
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "drawio_sessions";
-const DEFAULT_TITLE = "New Chat";
-const GREETING =
+export const DEFAULT_TITLE = "New Chat";
+export const GREETING =
   "你好！我是你的绘图助手，可以帮你创建和完善架构图、流程图、时序图等图表。请告诉我你的绘图需求，例如：绘制一个用户登录流程图，或修改现有图表。";
-
-function createInitialMessage(): Message {
-  return {
-    id: Date.now().toString(),
-    role: "agent",
-    content: GREETING,
-    timestamp: Date.now(),
-  };
-}
-
-function createSession(backendSessionId = ""): Session {
-  return {
-    id: Date.now().toString(),
-    backendSessionId,
-    title: DEFAULT_TITLE,
-    messages: [createInitialMessage()],
-    drawIoXml: null,
-    lastModified: Date.now(),
-  };
-}
-
-type SessionsState = {
-  sessions: Session[];
-  currentSessionId: string | null;
-  messages: Message[];
-  sessionId: string;
-};
+export const makeMessage = (role: Message["role"], content: string): Message => ({
+  id: crypto.randomUUID(),
+  role,
+  content,
+  timestamp: Date.now(),
+});
+const makeSession = (backendSessionId = ""): Session => ({
+  id: crypto.randomUUID(),
+  backendSessionId,
+  title: DEFAULT_TITLE,
+  messages: [makeMessage("agent", GREETING)],
+  drawIoXml: null,
+  lastModified: Date.now(),
+});
+type SessionsState = { sessions: Session[]; currentSessionId: string };
 
 function readInitialState(): SessionsState {
-  const savedSessions = localStorage.getItem(STORAGE_KEY);
-
-  if (savedSessions) {
-    try {
-      const sessions = JSON.parse(savedSessions) as Session[];
-      if (sessions.length > 0) {
-        const mostRecent = [...sessions].sort((a, b) => b.lastModified - a.lastModified)[0];
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (Array.isArray(saved)) {
+      const sessions = saved.filter(
+        (s): s is Session =>
+          s &&
+          typeof s.id === "string" &&
+          typeof s.title === "string" &&
+          Array.isArray(s.messages) &&
+          typeof s.lastModified === "number" &&
+          (s.drawIoXml === null || typeof s.drawIoXml === "string"),
+      );
+      if (sessions.length)
         return {
           sessions,
-          currentSessionId: mostRecent.id,
-          messages: mostRecent.messages,
-          sessionId: mostRecent.backendSessionId || "",
+          currentSessionId: [...sessions].sort((a, b) => b.lastModified - a.lastModified)[0].id,
         };
-      }
-    } catch (error) {
-      console.error("Failed to parse sessions:", error);
     }
+  } catch {
+    /* Recover an empty or unavailable local store. */
   }
-
-  const initialSession = createSession();
-  return {
-    sessions: [initialSession],
-    currentSessionId: initialSession.id,
-    messages: initialSession.messages,
-    sessionId: "",
-  };
+  const session = makeSession();
+  return { sessions: [session], currentSessionId: session.id };
 }
-
 export function useSessions() {
   const [state, setState] = useState(readInitialState);
-
-  useEffect(() => {
+  const latest = useRef(state);
+  const [storageError, setStorageError] = useState("");
+  const persistSessions = useCallback(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions));
-    } catch (error) {
-      console.error("Failed to save sessions to localStorage:", error);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(latest.current.sessions));
+      setStorageError("");
+    } catch {
+      setStorageError(
+        "Unable to save sessions in this browser. Keep this page open and try again.",
+      );
+      throw new Error("Unable to save sessions in this browser.");
     }
-  }, [state.sessions]);
-
-  const setMessages: Dispatch<SetStateAction<Message[]>> = useCallback((value) => {
-    setState((previous) => {
-      const messages = typeof value === "function" ? value(previous.messages) : value;
-      const firstUserMessage = messages.find((message) => message.role === "user");
-      return {
-        ...previous,
-        messages,
-        sessions: previous.sessions.map((session) =>
-          session.id === previous.currentSessionId
-            ? {
-                ...session,
-                messages,
-                title:
-                  session.title === DEFAULT_TITLE && firstUserMessage
-                    ? firstUserMessage.content.slice(0, 20)
-                    : session.title,
-              }
-            : session,
-        ),
-      };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        persistSessions();
+      } catch {
+        /* Preserve the initial session in memory. */
+      }
     });
-  }, []);
-
-  const setSessionId: Dispatch<SetStateAction<string>> = useCallback((value) => {
-    setState((previous) => {
-      const sessionId = typeof value === "function" ? value(previous.sessionId) : value;
-      return {
-        ...previous,
-        sessionId,
-        sessions: previous.sessions.map((session) =>
-          session.id === previous.currentSessionId
-            ? { ...session, backendSessionId: sessionId }
-            : session,
-        ),
-      };
-    });
-  }, []);
-
-  function createNewSession(backendSessionId = "") {
-    const newSession = createSession(backendSessionId);
-    setState((previous) => ({
-      sessions: [newSession, ...previous.sessions],
-      currentSessionId: newSession.id,
-      messages: newSession.messages,
-      sessionId: backendSessionId,
-    }));
-    return newSession;
-  }
-
-  function loadSession(targetSessionId: string) {
-    const session = state.sessions.find((item) => item.id === targetSessionId);
-    if (!session) return undefined;
-
-    setState((previous) => ({
-      ...previous,
-      currentSessionId: session.id,
-      messages: session.messages,
-      sessionId: session.backendSessionId || "",
-    }));
-    return session;
-  }
-
-  function deleteSession(sessionIdToDelete: string) {
-    const remainingSessions = state.sessions.filter((session) => session.id !== sessionIdToDelete);
-    setState((previous) => ({ ...previous, sessions: remainingSessions }));
-
-    if (state.currentSessionId !== sessionIdToDelete) return;
-
-    if (remainingSessions.length > 0) {
-      loadSession(remainingSessions[0].id);
-    } else {
-      createNewSession();
-    }
-  }
-
-  function renameSession(sessionIdToRename: string, title: string) {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-
-    setState((previous) => ({
-      ...previous,
-      sessions: previous.sessions.map((session) =>
-        session.id === sessionIdToRename ? { ...session, title: trimmedTitle } : session,
-      ),
-    }));
-  }
-
-  const updateCurrentSession = useCallback((update: (session: Session) => Session) => {
-    setState((previous) => ({
-      ...previous,
-      sessions: previous.sessions.map((session) =>
-        session.id === previous.currentSessionId ? update(session) : session,
-      ),
-    }));
-  }, []);
-
+    return () => {
+      cancelled = true;
+    };
+  }, [persistSessions]);
+  const commit = useCallback(
+    (next: SessionsState) => {
+      latest.current = next;
+      setState(next);
+      try {
+        persistSessions();
+      } catch {
+        /* Error is presented by the workbench. */
+      }
+    },
+    [persistSessions],
+  );
+  const updateSession = useCallback(
+    (id: string, update: (session: Session) => Session) => {
+      const previous = latest.current;
+      let updated: Session | undefined;
+      const sessions = previous.sessions.map((session) => {
+        if (session.id !== id) return session;
+        updated = update(session);
+        return updated;
+      });
+      if (updated) commit({ ...previous, sessions });
+      return updated;
+    },
+    [commit],
+  );
+  const createNewSession = useCallback(
+    (backendSessionId = "") => {
+      const session = makeSession(backendSessionId);
+      commit({ sessions: [session, ...latest.current.sessions], currentSessionId: session.id });
+      return session;
+    },
+    [commit],
+  );
+  const loadSession = useCallback(
+    (id: string) => {
+      const session = latest.current.sessions.find((s) => s.id === id);
+      if (session) commit({ ...latest.current, currentSessionId: id });
+      return session;
+    },
+    [commit],
+  );
+  const deleteSession = useCallback(
+    (id: string) => {
+      let sessions = latest.current.sessions.filter((s) => s.id !== id);
+      if (!sessions.length) sessions = [makeSession()];
+      const currentSessionId =
+        latest.current.currentSessionId === id ? sessions[0].id : latest.current.currentSessionId;
+      commit({ sessions, currentSessionId });
+      return sessions.find((s) => s.id === currentSessionId)!;
+    },
+    [commit],
+  );
+  const renameSession = useCallback(
+    (id: string, title: string) => {
+      if (title.trim()) updateSession(id, (s) => ({ ...s, title: title.trim() }));
+    },
+    [updateSession],
+  );
+  const getSession = useCallback(
+    (id: string) => latest.current.sessions.find((s) => s.id === id),
+    [],
+  );
+  const currentSession = state.sessions.find((s) => s.id === state.currentSessionId)!;
   return {
-    sessions: state.sessions,
-    currentSessionId: state.currentSessionId,
-    messages: state.messages,
-    sessionId: state.sessionId,
-    setMessages,
-    setSessionId,
+    ...state,
+    currentSession,
+    messages: currentSession.messages,
+    sessionId: currentSession.backendSessionId || "",
+    getSession,
+    updateSession,
+    persistSessions,
+    storageError,
     createNewSession,
     loadSession,
     deleteSession,
     renameSession,
-    updateCurrentSession,
   };
 }
