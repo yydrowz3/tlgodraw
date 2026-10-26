@@ -7,4 +7,3 @@ export function isDrawIoXmlContent(content: string): boolean {
     trimmed.includes("<diagram")
   );
 }
-

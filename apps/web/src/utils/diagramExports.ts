@@ -40,10 +40,7 @@ export class DiagramExportQueue {
     this.onBusy(Boolean(job));
     if (!job) return;
     this.active = job;
-    this.timer = setTimeout(
-      () => this.finish(new AppError("errors.exportTimeout")),
-      10_000,
-    );
+    this.timer = setTimeout(() => this.finish(new AppError("errors.exportTimeout")), 10_000);
     try {
       this.send({ format: "xmlsvg", requestId: job.id });
     } catch (error) {
@@ -53,7 +50,11 @@ export class DiagramExportQueue {
   receive(event: ExportEvent) {
     if (!this.active || event.message?.requestId !== this.active.id) return;
     if (event.error || !event.xml || !event.data) {
-      this.finish(new AppError(event.error ? "errors.exportFailed" : "errors.incompleteDiagram", { detail: event.error }));
+      this.finish(
+        new AppError(event.error ? "errors.exportFailed" : "errors.incompleteDiagram", {
+          detail: event.error,
+        }),
+      );
     } else {
       this.finish(undefined, {
         xml: event.xml,
