@@ -1,70 +1,186 @@
-# React + TypeScript + Vite
+# Too Long; Go Draw — Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The React frontend for Too Long; Go Draw, an AI-assisted diagramming workbench.
+Describe a diagram, review the generated Draw.io canvas, and refine it through
+chat or direct editing.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Embedded Draw.io editor with autosave and SVG preview/download.
+- AI agent selection, chat, and optional inclusion of the current diagram XML
+  as context for a request.
+- Multiple browser-local sessions with chat history, diagram restoration,
+  renaming, and deletion.
+- Responsive workbench with light and dark themes.
+- English, Simplified Chinese, and Japanese interface languages.
 
-## React Compiler
+## Stack
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+React 19, TypeScript 6, and Vite 8 with React Compiler; TanStack Router for
+file-based routes, TanStack Query for API state, and TanStack Form for login.
+Styling uses Tailwind CSS 4 and daisyUI 5. The diagram editor is embedded through
+`react-drawio`, and translations use i18next/react-i18next. Vitest and Testing
+Library provide tests; Oxlint and Oxfmt provide linting and formatting.
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+## Requirements
 
-## Expanding the Oxlint configuration
+- Node.js compatible with the installed dependencies. Node.js 24.15 or later
+  within the 24.x release line supports the current Vite, Vitest, and jsdom
+  engine requirements.
+- pnpm. The dependency lockfile is `pnpm-lock.yaml`.
+- The [Go API](../api/README.md) running for agent discovery and chat.
+- Browser access to a Draw.io embed server. The default is
+  `https://embed.diagrams.net`.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Local Development
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+From the repository root:
+
+```sh
+cd apps/web
+pnpm install --frozen-lockfile
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Copy `.env.example` to `.env.local` and set:
 
-## Interface languages
+```dotenv
+VITE_BASE_URL=http://localhost:8091/api/v1
+VITE_DRAWIO_BASE_URL=https://embed.diagrams.net
+```
 
-The interface supports English (`en`, the first-visit default), Simplified
-Chinese (`zh-CN`), and Japanese (`ja`). The language selector next to the
-appearance controls is available on both the login page and workbench, including
-mobile screens. The choice is saved under `tlgodraw_language` in localStorage.
-Invalid or inaccessible settings fall back to English; if saving is blocked,
-switching still works for the current page. Browser language detection is disabled.
+Start the API in another terminal using its README, then start the frontend:
 
-Translation resources live in `src/i18n/locales/`. Add semantic keys to
-`en.ts`, then supply the same keys and interpolation placeholders in
-`zh-CN.ts` and `ja.ts`. English defines the TypeScript key shape and is the
-runtime fallback. Keep phrases with variables in one translation rather than
-concatenating fragments. Use `useTranslation` for rendering and retain semantic
-keys or error objects in transient state so active notices also change language.
+```sh
+pnpm dev
+```
 
-Switching preserves drafts, sessions, requests, and the embedded editor. Dates
-and times follow the interface language while retaining the browser's time zone.
-Quick-action labels and newly inserted example prompts follow the selected language.
+Open the URL printed by Vite and sign in with the demo credentials:
+
+```text
+Username: admin
+Password: admin
+```
+
+This login is a client-side demo check stored in a browser cookie. It does not
+authenticate requests to the API.
+
+### Environment Variables
+
+| Variable | Purpose | Fallback |
+| --- | --- | --- |
+| `VITE_BASE_URL` | Complete API base URL, including `/api/v1` | `http://localhost:8091/api/v1` when undefined |
+| `VITE_DRAWIO_BASE_URL` | Draw.io embed server URL | `https://embed.diagrams.net` when empty or undefined |
+
+Set `VITE_BASE_URL` explicitly when copying the example: an empty value produces
+relative API requests and does **not** use the localhost fallback. There is no
+API proxy configured in `vite.config.ts`.
+
+Vite reads these values when starting development or building the application.
+Restart the dev server after changing them and rebuild for deployment. All
+`VITE_` values are exposed to the browser; keep AI provider credentials in the
+backend environment.
+
+## Commands
+
+Run these commands from `apps/web`:
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start the Vite development server |
+| `pnpm build` | Type-check the project and build static assets into `dist/` |
+| `pnpm preview` | Preview the production build locally |
+| `pnpm test` | Run the Vitest suite once in jsdom |
+| `pnpm lint` | Run Oxlint |
+| `pnpm fmt` | Format files with Oxfmt |
+| `pnpm fmt:check` | Check formatting without writing changes |
+
+The tests use mocked API responses and do not call an AI provider. They cover
+API state and cancellation, session ownership, diagram export and editor
+synchronization, theme preferences, and language switching. See
+[frontend verification](tests/README.md) for fixture-based browser QA.
+
+## API Integration
+
+`src/services/apiAgent.ts` calls these routes relative to `VITE_BASE_URL`:
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/query-ai-agent-config-list` | Load available agents |
+| `POST` | `/create_session` | Obtain a backend session ID |
+| `POST` | `/chat` | Submit a message and receive diagram XML or text |
+
+JSON responses use a `{ code, info, data }` envelope; `code: "0000"` indicates
+success. The current workbench uses the JSON chat endpoint. The backend also
+offers an SSE endpoint documented in the [API README](../api/README.md).
+
+## State and Editor Behavior
+
+Sessions, messages, and diagram XML are stored under `drawio_sessions` in
+localStorage for the current browser origin. They are separate from backend
+session IDs and are not synchronized between devices or browser origins.
+Language, theme, and the last selected agent use `tlgodraw_language`,
+`tlgodraw_theme`, and `ai_agent_last_agent`, respectively.
+
+The app saves the current diagram before switching sessions or remounting the
+editor for a theme change. A theme change resets Draw.io undo/redo history.
+Export requests are serialized and matched to their originating session to avoid
+applying delayed results to another drawing.
+
+## Internationalization
+
+English (`en`) is the first-visit default and runtime fallback; browser language
+detection is disabled. The language selector is available on the login page and
+workbench, and switching preserves drafts, sessions, requests, and the editor.
+Dates follow the interface language and retain the browser time zone.
+
+Translation resources live in `src/i18n/locales/`. Add semantic keys to `en.ts`,
+then supply matching keys and interpolation placeholders in `zh-CN.ts` and
+`ja.ts`. English defines the TypeScript key shape. Use `useTranslation` when
+rendering and store semantic keys or error objects for transient notices.
+
 Draw.io menus, configured agent names, user messages, AI replies, custom session
-titles, and diagram text are not translated. Chat failure messages retain the
-language used when they were recorded. API failures show a translated summary
-with any original server details; request contracts are unchanged.
+titles, and diagram text retain their original language. Recorded chat failures
+retain the language used when saved. Built-in session titles and greetings use
+`isDefaultTitle` and `kind: "greeting"` markers; legacy detection preserves
+manually assigned titles. Run `pnpm test`, `pnpm lint`, and `pnpm build` after
+changing translations.
 
-Local sessions keep the existing `drawio_sessions` key. Optional
-`isDefaultTitle` and `kind: "greeting"` markers allow built-in titles and
-welcome messages to translate at render time. Legacy sessions are recognized only
-when a `New Chat` title has no user messages, or the first agent message exactly
-matches the original built-in greeting. Explicit markers take precedence for
-titles, so manually naming a new session `New Chat` is preserved verbatim.
+## Project Layout
 
-Run `pnpm test`, `pnpm lint`, and `pnpm build` after changing translations.
-The tests check resource keys and placeholders, preference handling, live UI
-switching, historical content, request ownership, and editor preservation.
+```text
+public/                 Icons and branding assets
+src/
+  hooks/                Workbench, API, session, editor, and preference logic
+  i18n/                 Translation setup, messages, and locale resources
+  routes/               TanStack Router file-based routes
+  services/             HTTP API client
+  types/                API and workbench types
+  ui/                   Pages, shared components, and workbench panels
+  utils/                Diagram exports, themes, cookies, and helpers
+  main.tsx              Application entry point
+  routeTree.gen.ts      Generated route tree
+tests/                  Unit/component tests and the local API fixture
+vite.config.ts          Build plugins and the @/ source alias
+vitest.config.ts        jsdom test configuration
+```
+
+Edit route files in `src/routes/`; the router plugin generates
+`src/routeTree.gen.ts`.
+
+## Deployment and Troubleshooting
+
+Build with the public API and editor URLs configured, then serve `dist/` from a
+static host. Configure SPA fallback to `index.html` so direct navigation to
+`/login` works. `pnpm preview` is for local build verification.
+
+- **Agents do not load:** confirm the API is running and `VITE_BASE_URL` includes
+  `/api/v1`. Check the browser network panel for HTTP or application errors.
+- **The editor does not load:** verify the embed server is reachable and allows
+  embedding. An HTTPS frontend needs a browser-trusted HTTPS editor endpoint.
+- **Sessions cannot be saved:** check localStorage availability and quota;
+  export important diagrams before clearing browser storage.
+- **AI generation fails:** inspect the API logs and backend provider/model
+  configuration.
+
+See the [project overview](../../README.md),
+[contribution guide](../../CONTRIBUTING.md), and [MIT license](../../LICENSE).
