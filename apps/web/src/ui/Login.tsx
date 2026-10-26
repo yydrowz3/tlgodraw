@@ -5,11 +5,11 @@ import {
   BrainIcon,
   ChartLineIcon,
   GraphIcon,
-  PolygonIcon,
   SignInIcon,
 } from "@phosphor-icons/react";
 import { useLogin } from "@/hooks/useLogin";
 import { ThemeSelector } from "./ThemeSelector";
+import { BrandMark } from "./BrandMark";
 
 const features = [
   {
@@ -46,11 +46,9 @@ export default function Login() {
           />
           <div className="relative flex h-full flex-col">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-content">
-                <PolygonIcon size={26} aria-hidden="true" />
-              </div>
+              <BrandMark size={56} />
               <div>
-                <p className="text-sm font-bold tracking-wider">TLGODRAW</p>
+                <p className="text-sm font-bold tracking-wider">Too Long; Go Draw!</p>
                 <p className="text-xs text-base-content/55">{t("login.workbench")}</p>
               </div>
             </div>

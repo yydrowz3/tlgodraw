@@ -1,13 +1,8 @@
 import { useTranslation } from "react-i18next";
-import {
-  ChatCircleIcon,
-  DownloadSimpleIcon,
-  ListIcon,
-  PolygonIcon,
-  SignOutIcon,
-} from "@phosphor-icons/react";
+import { ChatCircleIcon, DownloadSimpleIcon, ListIcon, SignOutIcon } from "@phosphor-icons/react";
 import { LanguageSelector } from "@/ui/LanguageSelector";
 import { ThemeSelector } from "@/ui/ThemeSelector";
+import { BrandMark } from "@/ui/BrandMark";
 
 type Props = {
   currentUser: string;
@@ -34,14 +29,12 @@ export function WorkbenchHeader(props: Props) {
         <ListIcon size={21} aria-hidden="true" />
       </button>
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="hidden size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-content sm:flex">
-          <PolygonIcon size={23} aria-hidden="true" />
-        </div>
+        <BrandMark size={48} className="hidden sm:block" />
         <div className="min-w-0">
           <h1 className="truncate text-sm font-bold tracking-tight sm:text-lg">
-            too long; go draw!
+            Too Long; Go Draw!
           </h1>
-          <p className="hidden text-xs text-base-content/50 lg:block">@yydrowz3</p>
+          {/* <p className="hidden text-xs text-base-content/50 lg:block">@yydrowz3</p> */}
         </div>
       </div>
       <span className="badge badge-outline hidden gap-2 border-base-300 px-3 py-3 text-xs lg:inline-flex">
