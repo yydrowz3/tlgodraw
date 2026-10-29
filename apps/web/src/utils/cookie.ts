@@ -17,7 +17,13 @@ export function getCookie(name: string): string | null {
     const eqIndex = item.indexOf("=");
     const k = eqIndex >= 0 ? item.slice(0, eqIndex) : item;
     const v = eqIndex >= 0 ? item.slice(eqIndex + 1) : "";
-    if (k === name) return decodeURIComponent(v);
+    if (k === name) {
+      try {
+        return decodeURIComponent(v);
+      } catch {
+        return null;
+      }
+    }
   }
   return null;
 }

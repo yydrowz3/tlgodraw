@@ -57,6 +57,7 @@ Run the following commands from `apps/web`:
 
 ```bash
 pnpm install
+pnpm test
 pnpm lint
 pnpm build
 ```

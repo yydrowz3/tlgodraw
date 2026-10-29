@@ -1,4 +1,5 @@
 import { createQueryTestContext } from "./queryTestUtils";
+import { mockDialogs } from "./dialogTestUtils";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, resources, setLanguage } from "@/i18n";
@@ -40,18 +41,7 @@ beforeEach(() => {
         removeEventListener: vi.fn(),
       }) as unknown as MediaQueryList,
   );
-  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
-    configurable: true,
-    value: vi.fn(function (this: HTMLDialogElement) {
-      this.open = true;
-    }),
-  });
-  Object.defineProperty(HTMLDialogElement.prototype, "close", {
-    configurable: true,
-    value: vi.fn(function (this: HTMLDialogElement) {
-      this.open = false;
-    }),
-  });
+  mockDialogs();
 });
 
 describe("live interface translation", () => {

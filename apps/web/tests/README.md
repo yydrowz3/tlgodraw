@@ -16,6 +16,21 @@ selection changes, and delayed responses after unmount. Each test gets an
 isolated QueryClient, and API requests use mocked fetch responses. They do not
 call an AI provider.
 
+Additional tests cover login validation and demo credentials, login restoration,
+logout and redirect cancellation, real Cookie encoding and expiry, protected
+routes using an in-memory router, responsive media queries, and mobile viewport
+resizing. Component tests cover composer shortcuts and disabled states, dialog
+closing and focus restoration, side-panel focus wrapping and Escape handling,
+rename validation, and export preview/download links.
+
+Run a single module with `pnpm test tests/login.test.ts`. Shared cleanup unmounts
+components and resets mocks, stubbed globals, timers, local storage, and cookies.
+Dialog tests use `dialogTestUtils.ts` to supply the native `showModal`/`close`
+methods missing from jsdom, restoring them after unmount. Side-panel tests supply
+element rectangles because jsdom does not perform layout. These tests verify
+event handling and focus changes; native dialog focus trapping, actual downloads,
+and mobile keyboard behavior still need browser/device QA.
+
 For browser QA, `node tests/apiFixture.mjs` serves a deterministic API on port 8099. In a second PowerShell terminal, start an isolated frontend using the real
 self-hosted Draw.io instance:
 

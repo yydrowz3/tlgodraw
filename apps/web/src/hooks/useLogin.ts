@@ -48,7 +48,7 @@ export function useLogin() {
   });
 
   useEffect(() => {
-    if (userInfo?.user) navigate({ to: "/" });
+    if (userInfo?.user && redirectTimer.current === null) navigate({ to: "/" });
   }, [navigate, userInfo]);
 
   useEffect(() => {
@@ -64,6 +64,10 @@ export function useLogin() {
   }
 
   function handleLogout() {
+    if (redirectTimer.current !== null) {
+      clearTimeout(redirectTimer.current);
+      redirectTimer.current = null;
+    }
     clearUserInfo();
     setUserInfoState(null);
     setMessage({ key: "login.loggedOut", type: "info" });

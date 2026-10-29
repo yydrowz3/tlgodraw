@@ -15,6 +15,7 @@ type Props = {
 };
 export function MessageComposer(props: Props) {
   const { t } = useTranslation();
+  const canSend = Boolean(props.value.trim()) && !props.isSending && !props.disabled;
   return (
     <div className="shrink-0 border-t border-base-300 bg-base-100 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       {props.showQuickActions && (
@@ -53,7 +54,8 @@ export function MessageComposer(props: Props) {
             if (
               event.key === "Enter" &&
               (event.metaKey || event.ctrlKey) &&
-              !event.nativeEvent.isComposing
+              !event.nativeEvent.isComposing &&
+              canSend
             ) {
               event.preventDefault();
               props.onSend();
@@ -68,7 +70,7 @@ export function MessageComposer(props: Props) {
           <button
             className="btn btn-primary btn-square min-h-11 min-w-11"
             onClick={props.onSend}
-            disabled={!props.value.trim() || props.isSending || props.disabled}
+            disabled={!canSend}
             aria-label={t("composer.send")}
           >
             {props.isSending ? (
